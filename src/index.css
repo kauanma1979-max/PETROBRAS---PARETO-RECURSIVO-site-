@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --color-petro-green: #008542;
+  --color-petro-green-dark: #006837;
+  --color-petro-forest: #071F14;
+  --color-petro-yellow: #FDB913;
+  --color-petro-orange: #EA580C;
+}
+
+:root {
+  --surface-canvas: #f6f8f7;
+  --surface-card: #ffffff;
+  --surface-muted: #eff4f1;
+  --border-hairline: #dce4df;
+  --accent-primary: #008542;
+  --accent-primary-hover: #006837;
+  --accent-gold: #fdb913;
+  --accent-orange: #ea580c;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    background-color: var(--surface-canvas);
+    color: #091d14;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  /* Accessible focus ring across all interactive elements */
+  :focus-visible {
+    outline: 2px solid #008542;
+    outline-offset: 2px;
+  }
+
+  /* Tabular numerals helper for metrics, dates & tables */
+  .tabular-nums,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Motion Keyframes (compositor-only: transform & opacity) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tabEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 180ms var(--ease-snappy) both;
+}
+
+.animate-scaleUp {
+  animation: scaleUp 200ms var(--ease-snappy) both;
+}
+
+.animate-tabEnter {
+  animation: tabEnter 180ms var(--ease-snappy) both;
+}
+
+/* Hide scrollbars cleanly where horizontal nav scrolling is used */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respect user reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-fadeIn,
+  .animate-scaleUp,
+  .animate-tabEnter {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

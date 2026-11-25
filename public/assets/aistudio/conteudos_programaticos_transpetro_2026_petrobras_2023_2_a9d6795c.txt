@@ -1,0 +1,182 @@
+CONTEÚDOS PROGRAMÁTICOS — CONHECIMENTOS ESPECÍFICOS
+TRANSPETRO 2026 E PETROBRAS 2023.2
+
+Documento com as listas separadas, contendo exclusivamente os conhecimentos específicos das ênfases de interesse.
+
+======================================================================
+1. TRANSPETRO 2026 — ÊNFASE 4: DUTOS E TERMINAIS
+Edital nº 03 — Profissional Transpetro de Nível Médio Júnior
+ANEXO IV — CONTEÚDOS PROGRAMÁTICOS
+======================================================================
+
+1. Noções de metrologia.
+
+2. Transmissão e transmissores pneumáticos, eletrônicos analógicos, digitais e inteligentes.
+
+3. Noções de controle de processos: sistemas de malha aberta e sistemas de malha fechada.
+
+4. Elementos finais de controle: válvulas de controle pneumáticas, hidráulicas e motorizadas.
+
+5. Noções de instrumentação: tipos de instrumentos, terminologia e simbologia.
+
+6. Noções de sistemas instrumentados de segurança.
+
+7. Noções de medição, definições e unidades de pressão, temperatura, nível, vazão, massa e densidade.
+
+8. Sistema Internacional de Unidades.
+
+9. Instrumentos de medição de pressão, nível, temperatura e vazão.
+
+10. Mecânica Geral: estática, cinemática e dinâmica.
+
+11. Conservação da energia mecânica.
+
+12. Noções de Mecânica dos Fluidos: propriedades dos fluidos, hidrostática, escoamento em tubulações e dutos, e perda de carga em tubulações e dutos.
+
+13. Noções de Transmissão de Calor: condução, convecção e radiação.
+
+14. Máquinas térmicas.
+
+15. Resistência dos Materiais: tensões normais e cisalhantes, solicitações axiais, flexão e torção.
+
+16. Termodinâmica Básica: propriedades termodinâmicas, primeira e segunda leis da termodinâmica.
+
+17. Noções de Equipamentos de Processo: bombas centrífugas e alternativas, compressores e permutadores casco/tubo.
+
+18. Segurança do trabalho, meio ambiente e saúde.
+
+19. Noções de Química Geral: modelos atômicos e classificação periódica dos elementos químicos.
+
+20. Ligações químicas.
+
+21. Cálculo estequiométrico.
+
+22. Estudo dos gases.
+
+23. Reações de oxidação-redução.
+
+24. Noções de Química Inorgânica: ácidos, bases, sais e óxidos.
+
+25. Noções de Química Orgânica: hidrocarbonetos e polímeros.
+
+26. Unidades de concentração em massa, volume e quantidade de matéria.
+
+27. Transformações químicas e equilíbrio.
+
+28. Termoquímica.
+
+29. Soluções aquosas.
+
+30. Dispersões.
+
+31. Natureza elétrica da matéria.
+
+32. Operações unitárias.
+
+33. Noções de processos de refino.
+
+34. Eletrostática.
+
+35. Cargas elétricas em movimento.
+
+36. Eletromagnetismo.
+
+37. Radiações eletromagnéticas.
+
+38. Noções de eletricidade e eletrônica.
+
+
+======================================================================
+2. PETROBRAS 2023.2 — ÊNFASE 8: OPERAÇÃO
+Edital nº 1 — Petrobras/PSP RH 2023.2
+ANEXO IV — OBJETOS DE AVALIAÇÃO
+======================================================================
+
+BLOCO I
+
+1. Ácidos, bases, sais e óxidos.
+
+2. Reações de óxido-redução.
+
+3. Cálculos estequiométricos.
+
+4. Transformações químicas e equilíbrio.
+
+5. Condições de Equilíbrio.
+
+6. Soluções aquosas.
+
+7. Dispersões.
+
+8. Natureza elétrica da matéria.
+
+9. Leis de Newton.
+
+10. Eletrostática.
+
+11. Cargas em movimento.
+
+12. Eletromagnetismo.
+
+13. Termodinâmica Básica.
+
+14. Noções de Instrumentação.
+
+15. Química orgânica: hidrocarbonetos e polímeros.
+
+16. Noções de Metrologia.
+
+17. Noções de eletricidade e eletrônica.
+
+
+BLOCO II
+
+1. Estática, cinemática e dinâmica.
+
+2. Conservação de Energia Mecânica.
+
+3. Propriedades e processos térmicos.
+
+4. Máquinas térmicas e processos naturais.
+
+5. Termoquímica.
+
+6. Radiação eletromagnética.
+
+7. Hidrostática.
+
+8. Escalas de temperatura.
+
+9. Estudo dos Gases.
+
+
+BLOCO III
+
+1. Noções de controle de processo.
+
+2. Noções de operações unitárias.
+
+3. Noções de equipamentos de processo: bombas centrífugas e alternativas; permutadores de casco/tubo; tubulações industriais; válvulas e acessórios.
+
+4. Segurança, meio ambiente e saúde.
+
+5. Mecânica dos fluidos.
+
+6. Transmissão e transmissores pneumáticos e eletrônicos.
+
+
+======================================================================
+FONTES E OBSERVAÇÕES
+======================================================================
+
+1. Transpetro 2026: Edital nº 03 — TRANSPETRO/PSP/TERRA/NÍVEL MÉDIO-2026.3, Anexo IV, Ênfase 4: Dutos e Terminais. A lista contém 38 itens de conhecimentos específicos. Foram deixados de fora os conhecimentos básicos de Língua Portuguesa e Matemática.
+
+2. Petrobras 2023.2: Edital nº 1 — PETROBRAS/PSP RH 2023.2, Anexo IV — Objetos de Avaliação, Ênfase 8: Operação. A lista contém os três blocos de conhecimentos específicos. Foram deixados de fora os conhecimentos básicos.
+
+3. A redação e a organização por itens/blocos foram preservadas conforme as referências dos editais consultados. Este documento não acrescenta explicações, ampliações ou conteúdos de apostilas.
+
+Referência Transpetro 2026 (conteúdo do Anexo IV, Ênfase 4):
+https://concursos.cesgranrio.org.br/portal/avaliacoes/22
+
+Referência Petrobras 2023.2 (Edital nº 1, Anexo IV):
+https://cdn.cebraspe.org.br/concursos/petrobras_23_ntj/arquivos/ED_1_PETROBRAS_PSP_23_2_ABERTURA_ATUALIZADO_RET_3_DOU.PDF
