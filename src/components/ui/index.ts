@@ -12,3 +12,5 @@ export { EmptyState } from './EmptyState';
 export { ToastBanner } from './ToastBanner';
 export { OriginBadge } from './OriginBadge';
 export type { OrigemEdital } from './OriginBadge';
+export { SubjectBaseBadge } from './SubjectBaseBadge';
+

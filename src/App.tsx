@@ -14,8 +14,8 @@ import { FormulaCalculatorModal } from './components/FormulaCalculatorModal';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { NavigationTabs } from './components/NavigationTabs';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
+import { StudyResumePrompt } from './components/StudyResumePrompt';
 import {
-  StudySession,
   TOTAL_CICLOS_ESTUDO,
   TOTAL_SESSOES_ESTUDO,
   TOTAL_QUESTOES_PLANEJADAS,
@@ -32,6 +32,19 @@ import {
   setLastDriveSyncDate
 } from './utils/driveSync';
 import { generateBackupPayload, restoreFromRawData } from './utils/backupStorage';
+import {
+  FOCUS_STORAGE_KEYS,
+  loadActivePomodoroState,
+  normalizeRestoredPomodoroOnAppOpen,
+  saveActivePomodoroState,
+} from './utils/studyFocusStorage';
+import { getInitialCalendarDateKey } from './utils/studyCalendar2027';
+import {
+  buildTimerLaunchTargetFromLegacySession,
+  resolveStudyResumeContext,
+  type ResolvedStudyResume,
+  type TimerLaunchTarget,
+} from './utils/studyResume';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -87,12 +100,54 @@ export default function App() {
     }
   });
 
-  const [activeSession, setActiveSession] = useState<StudySession | null>(null);
+  const [activeTimerTarget, setActiveTimerTarget] = useState<TimerLaunchTarget | null>(null);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(FOCUS_STORAGE_KEYS.SELECTED_DATE);
+      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) return saved;
+    } catch {
+      // ignore
+    }
+    return getInitialCalendarDateKey();
+  });
+  const [resumeContext, setResumeContext] = useState<ResolvedStudyResume | null>(() => {
+    // Na abertura do app, normaliza qualquer cronômetro que tenha sido deixado rodando (pausa no último checkpoint)
+    const active = loadActivePomodoroState();
+    const normalized = normalizeRestoredPomodoroOnAppOpen(active);
+    if (active && normalized && active.isRunning && !normalized.isRunning) {
+      saveActivePomodoroState(normalized);
+    }
+    return resolveStudyResumeContext();
+  });
+  const [isResumePromptOpen, setIsResumePromptOpen] = useState<boolean>(() => {
+    return resolveStudyResumeContext() !== null;
+  });
+
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
   const [calculatorFormula, setCalculatorFormula] = useState<string | undefined>(undefined);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [backupModalTab, setBackupModalTab] = useState<'drive' | 'file' | 'code'>('drive');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+
+  const handleSelectCalendarDate = (dateKey: string) => {
+    setSelectedCalendarDate(dateKey);
+    try {
+      localStorage.setItem(FOCUS_STORAGE_KEYS.SELECTED_DATE, dateKey);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleOpenScheduleAtDate = (dateKey: string) => {
+    handleSelectCalendarDate(dateKey);
+    setIsResumePromptOpen(false);
+    handleTabChange('cronograma');
+  };
+
+  const handleResumeTimerFromPrompt = (target: TimerLaunchTarget) => {
+    setIsResumePromptOpen(false);
+    setActiveTimerTarget(target);
+  };
 
   const handleOpenCalculator = (formulaNome?: string) => {
     setCalculatorFormula(formulaNome);
@@ -123,15 +178,23 @@ export default function App() {
         localStorage.getItem('transpetro_completed_days_v2') ||
         localStorage.getItem('transpetro_completed_days');
       setCompletedSessions(parseCompletedSessions(raw));
+      const savedDate = localStorage.getItem(FOCUS_STORAGE_KEYS.SELECTED_DATE);
+      if (savedDate && /^\d{4}-\d{2}-\d{2}$/.test(savedDate)) {
+        setSelectedCalendarDate(savedDate);
+      }
+      setResumeContext(resolveStudyResumeContext());
     } catch {
       /* ignore */
     }
   };
 
   useEffect(() => {
+    const refreshResume = () => setResumeContext(resolveStudyResumeContext());
     window.addEventListener('transpetro_data_restored', handleDataRestored);
+    window.addEventListener('transpetro_focus_updated', refreshResume);
     return () => {
       window.removeEventListener('transpetro_data_restored', handleDataRestored);
+      window.removeEventListener('transpetro_focus_updated', refreshResume);
     };
   }, []);
 
@@ -278,7 +341,12 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-edital"
             className={activeTab === 'edital' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <EditalSummary onNavigateTab={handleTabChange} />
+            <EditalSummary
+              onNavigateTab={handleTabChange}
+              resumeContext={resumeContext}
+              onResumeTimer={setActiveTimerTarget}
+              onOpenScheduleDate={handleOpenScheduleAtDate}
+            />
           </div>
 
           <div
@@ -313,7 +381,12 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             <StudySchedule
               completedSessions={completedSessions}
               onToggleSession={handleToggleSession}
-              onOpenSessionTimer={(session) => setActiveSession(session)}
+              onOpenSessionTimer={(session) =>
+                setActiveTimerTarget(buildTimerLaunchTargetFromLegacySession(session))
+              }
+              onLaunchTimer={setActiveTimerTarget}
+              selectedCalendarDate={selectedCalendarDate}
+              onSelectCalendarDate={handleSelectCalendarDate}
             />
           </div>
 
@@ -372,11 +445,20 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           }}
         />
 
-        {/* Interactive Session Timer Modal */}
+        {/* Interactive 50/20 Focus Timer Modal */}
         <DailySessionModal
-          session={activeSession}
-          onClose={() => setActiveSession(null)}
+          target={activeTimerTarget}
+          onClose={() => setActiveTimerTarget(null)}
           onCompleteSession={handleCompleteSession}
+        />
+
+        {/* Startup Study Resume Prompt */}
+        <StudyResumePrompt
+          isOpen={isResumePromptOpen && !activeTimerTarget}
+          resumeContext={resumeContext}
+          onResumeTimer={handleResumeTimerFromPrompt}
+          onOpenSchedule={handleOpenScheduleAtDate}
+          onDismiss={() => setIsResumePromptOpen(false)}
         />
 
         {/* Clean Institutional Footer */}

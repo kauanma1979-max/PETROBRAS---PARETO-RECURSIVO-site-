@@ -89,7 +89,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
         setCopied(true);
         setFeedback({
           type: 'success',
-          message: 'Código JSON completo copiado para a Área de Transferência!'
+          message: 'Código JSON completo copiado para a área de transferência.'
         });
         setTimeout(() => setCopied(false), 3000);
       } else {
@@ -183,7 +183,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
               {stats.totalItems} registros · {jsonSizeKB} KB
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
             <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">
               <div className="text-[11px] text-slate-600 flex items-center justify-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#008542]" aria-hidden="true" />
@@ -218,6 +218,15 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
               </div>
               <div className="text-sm font-bold text-slate-900 mt-0.5 font-mono tabular-nums">
                 {stats.materialLinksCount}
+              </div>
+            </div>
+            <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center col-span-2 sm:col-span-1">
+              <div className="text-[11px] text-slate-600 flex items-center justify-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-sky-700" aria-hidden="true" />
+                <span>Registros Foco</span>
+              </div>
+              <div className="text-sm font-bold text-slate-900 mt-0.5 font-mono tabular-nums">
+                {stats.focusLogsCount}
               </div>
             </div>
           </div>
@@ -336,7 +345,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
                   }
                   className="w-full"
                 >
-                  {copied ? 'Copiado para o Clipboard!' : 'Ou Copiar Texto JSON'}
+                  {copied ? 'Copiado para o clipboard' : 'Copiar texto JSON'}
                 </Button>
               </div>
             </div>
@@ -396,7 +405,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
                     )
                   }
                 >
-                  {copied ? 'Copiado!' : 'Copiar Tudo'}
+                  {copied ? 'Copiado' : 'Copiar tudo'}
                 </Button>
               </div>
               <pre className="bg-[#071F14] text-[#FDB913] p-3 rounded-lg text-[11px] font-mono max-h-36 overflow-y-auto overflow-x-auto select-all border border-[#123826]">

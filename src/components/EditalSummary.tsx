@@ -1,6 +1,9 @@
 import React from 'react';
 import { EDITAL_METADATA } from '../data/editalData';
 import { Card, StatusBadge, Button, OriginBadge } from './ui';
+import { MaterialLinksSection } from './MaterialLinksSection';
+import { StudyResumeCompactCard } from './StudyResumePrompt';
+import type { ResolvedStudyResume, TimerLaunchTarget } from '../utils/studyResume';
 import {
   Clock,
   FileSpreadsheet,
@@ -14,11 +17,28 @@ import {
 
 interface EditalSummaryProps {
   onNavigateTab?: (tabId: string) => void;
+  resumeContext?: ResolvedStudyResume | null;
+  onResumeTimer?: (target: TimerLaunchTarget) => void;
+  onOpenScheduleDate?: (dateKey: string) => void;
 }
 
-export const EditalSummary: React.FC<EditalSummaryProps> = ({ onNavigateTab }) => {
+export const EditalSummary: React.FC<EditalSummaryProps> = ({
+  onNavigateTab,
+  resumeContext = null,
+  onResumeTimer,
+  onOpenScheduleDate,
+}) => {
   return (
     <div className="space-y-6">
+      {resumeContext && onResumeTimer && (
+        <StudyResumeCompactCard
+          resumeContext={resumeContext}
+          onResumeTimer={onResumeTimer}
+          onOpenSchedule={onOpenScheduleDate}
+          showScheduleLink={Boolean(onOpenScheduleDate)}
+        />
+      )}
+
       {/* Awaiting Edital Placeholder Card */}
       <Card padding="lg">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -131,6 +151,22 @@ export const EditalSummary: React.FC<EditalSummaryProps> = ({ onNavigateTab }) =
           </Card>
         ))}
       </div>
+
+      {/* Global Material Links Central moved from TabMaterialEstudo footer */}
+      <Card padding="lg" className="space-y-4">
+        <div className="border-b border-slate-100 pb-3">
+          <h3 className="text-base sm:text-lg font-display font-bold text-slate-900">
+            Materiais e Referências do Edital
+          </h3>
+          <p className="text-xs text-slate-600 mt-0.5">
+            Central global de links, apostilas em PDF, cadernos de questões e pastas de apoio por macroárea (ordenada por incidência Pareto).
+          </p>
+        </div>
+        <MaterialLinksSection
+          moduloId="todos"
+          showAllModulesFilter={true}
+        />
+      </Card>
     </div>
   );
 };

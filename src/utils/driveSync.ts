@@ -9,6 +9,12 @@ import {
   restoreFromRawData,
   STORAGE_KEYS
 } from './backupStorage';
+import {
+  deduplicateFocusLogs,
+  normalizeRestoredPomodoroOnAppOpen,
+  type PomodoroActiveState,
+  type StudyResumeState,
+} from './studyFocusStorage';
 
 export const STORAGE_KEY_DRIVE_ENDPOINT = 'google_drive_sync_endpoint_v1';
 export const STORAGE_KEY_DRIVE_AUTO_SYNC = 'google_drive_auto_sync_v1';
@@ -279,7 +285,50 @@ export function mergeTranspetroBackupData(
     : {};
   const mergedBancaNotes = { ...remoteBanca, ...localBanca };
 
-  // 9. Other Storage Keys
+  // 9. Pomodoro Focus Logs (união deduplicada por id)
+  const localFocusLogs = Array.isArray(local.data?.pomodoroFocusLogs)
+    ? local.data.pomodoroFocusLogs
+    : [];
+  const remoteFocusLogs = Array.isArray(remoteData.pomodoroFocusLogs)
+    ? remoteData.pomodoroFocusLogs
+    : [];
+  const mergedFocusLogs = deduplicateFocusLogs([...remoteFocusLogs, ...localFocusLogs]);
+
+  // 10. Study Resume State (preserva o mais recente por updatedAt)
+  const localResume = local.data?.studyResumeState as StudyResumeState | null | undefined;
+  const remoteResume = remoteData.studyResumeState as StudyResumeState | null | undefined;
+  let mergedResumeState: StudyResumeState | null = localResume || remoteResume || null;
+  if (localResume && remoteResume) {
+    mergedResumeState =
+      (Number(localResume.updatedAt) || 0) >= (Number(remoteResume.updatedAt) || 0)
+        ? localResume
+        : remoteResume;
+  }
+
+  // 11. Pomodoro Active State (mais recente por lastCheckpointAt, sempre normalizado pausado)
+  const localActive = normalizeRestoredPomodoroOnAppOpen(
+    (local.data?.pomodoroActiveState as PomodoroActiveState | null | undefined) || null
+  );
+  const remoteActive = normalizeRestoredPomodoroOnAppOpen(
+    (remoteData.pomodoroActiveState as PomodoroActiveState | null | undefined) || null
+  );
+  let mergedActiveState: PomodoroActiveState | null = localActive || remoteActive || null;
+  if (localActive && remoteActive) {
+    mergedActiveState =
+      (Number(localActive.lastCheckpointAt) || 0) >= (Number(remoteActive.lastCheckpointAt) || 0)
+        ? localActive
+        : remoteActive;
+  }
+
+  // 12. Calendar Selected Date
+  const mergedCalendarSelectedDate =
+    typeof local.data?.calendarSelectedDate === 'string' && local.data.calendarSelectedDate.trim()
+      ? local.data.calendarSelectedDate
+      : typeof remoteData.calendarSelectedDate === 'string' && remoteData.calendarSelectedDate.trim()
+      ? remoteData.calendarSelectedDate
+      : undefined;
+
+  // 13. Other Storage Keys
   const localOther = (local.data?.otherStorageKeys && typeof local.data.otherStorageKeys === 'object')
     ? local.data.otherStorageKeys
     : {};
@@ -290,7 +339,7 @@ export function mergeTranspetroBackupData(
 
   const now = new Date();
   return {
-    version: '2.2',
+    version: '2.3',
     app: 'Transpetro & Petrobras - Guia Técnico Mesclado (Dutos e Terminais + Operação)',
     exportTimestamp: now.toISOString(),
     exportDateFormatted: now.toLocaleString('pt-BR'),
@@ -303,6 +352,10 @@ export function mergeTranspetroBackupData(
       materialLinks: mergedMaterialLinks,
       scheduleDayNotes: mergedNotes,
       bancaNotes: mergedBancaNotes,
+      pomodoroFocusLogs: mergedFocusLogs,
+      pomodoroActiveState: mergedActiveState,
+      studyResumeState: mergedResumeState,
+      calendarSelectedDate: mergedCalendarSelectedDate,
       otherStorageKeys: mergedOther
     }
   };

@@ -15,7 +15,10 @@ import {
   EmptyState,
   ToastBanner,
   OriginBadge,
+  SubjectBaseBadge,
 } from './ui';
+import { classifyTopicById, classifyMacroArea } from '../utils/subjectClassification';
+import { sortMacrosByPareto, sortSyllabusTopicsByPareto } from '../utils/paretoOrdering';
 import {
   Search,
   CheckCircle2,
@@ -263,7 +266,7 @@ export const EditalVerticalizado: React.FC = () => {
 
   const handleDownloadBackupJson = () => {
     exportFullBackup();
-    setGlobalSaveFeedback('Arquivo de backup JSON gerado com sucesso!');
+    setGlobalSaveFeedback('Arquivo de backup JSON gerado com sucesso.');
     setTimeout(() => setGlobalSaveFeedback(null), 3000);
   };
 
@@ -353,6 +356,8 @@ export const EditalVerticalizado: React.FC = () => {
     setExpandedTopics({});
   };
 
+  const orderedMacroDivisoes = useMemo(() => sortMacrosByPareto(MACRO_DIVISOES), []);
+
   const groupedByMacro = useMemo(() => {
     const groups: Record<MacroAreaId, EditalTopic[]> = {
       instrumentacao: [],
@@ -363,6 +368,10 @@ export const EditalVerticalizado: React.FC = () => {
 
     filteredItems.forEach((item) => {
       groups[item.macroArea].push(item);
+    });
+
+    (Object.keys(groups) as MacroAreaId[]).forEach((macroKey) => {
+      groups[macroKey] = sortSyllabusTopicsByPareto(groups[macroKey]);
     });
 
     return groups;
@@ -438,7 +447,7 @@ export const EditalVerticalizado: React.FC = () => {
       });
       return next;
     });
-    setGlobalSaveFeedback('Teoria marcada para todos os tópicos de Prioridade Crítica!');
+    setGlobalSaveFeedback('Teoria marcada para todos os tópicos de Prioridade Crítica.');
     setTimeout(() => setGlobalSaveFeedback(null), 3000);
   };
 
@@ -560,8 +569,8 @@ export const EditalVerticalizado: React.FC = () => {
 
   const visibleMacroList =
     selectedMacro === 'todas'
-      ? MACRO_DIVISOES
-      : MACRO_DIVISOES.filter((m) => m.id === selectedMacro);
+      ? orderedMacroDivisoes
+      : orderedMacroDivisoes.filter((m) => m.id === selectedMacro);
 
   return (
     <div className="space-y-6">
@@ -707,9 +716,10 @@ export const EditalVerticalizado: React.FC = () => {
 
       {/* Macro Divisions Interactive Grid Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {MACRO_DIVISOES.map((macro, index) => {
+        {orderedMacroDivisoes.map((macro, index) => {
           const stats = getMacroStats(macro.id);
           const isSelected = selectedMacro === macro.id;
+          const macroSubject = classifyMacroArea(macro.id);
 
           return (
             <button
@@ -718,10 +728,10 @@ export const EditalVerticalizado: React.FC = () => {
               id={`card-macro-${macro.id}`}
               aria-pressed={isSelected}
               onClick={() => setSelectedMacro(isSelected ? 'todas' : macro.id)}
-              className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+              className={`p-4 rounded-2xl border text-left transition-[border-color,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] flex flex-col justify-between cursor-pointer ${
                 isSelected
                   ? 'bg-[#071F14] text-white border-[#071F14] shadow-sm ring-2 ring-orange-500/70'
-                  : 'bg-white text-slate-800 border-slate-200/90 hover:border-[#008542]/45 hover:-translate-y-0.5 shadow-2xs'
+                  : 'bg-white text-slate-800 border-slate-200/90 hover:border-[#008542]/45 hover:bg-[#F6F8F7]/60 shadow-2xs'
               }`}
             >
               <div>
@@ -735,13 +745,16 @@ export const EditalVerticalizado: React.FC = () => {
                   >
                     {getMacroIcon(macro.id, 'w-4 h-4')}
                   </span>
-                  <span
-                    className={`text-[11px] font-mono tabular-nums px-2 py-0.5 rounded-md font-bold ${
-                      isSelected ? 'bg-[#0C2F1E] text-[#FDB913]' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    Peso {macro.pesoEstimado}%
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <SubjectBaseBadge category={macroSubject} compact />
+                    <span
+                      className={`text-[11px] font-mono tabular-nums px-2 py-0.5 rounded-md font-bold ${
+                        isSelected ? 'bg-[#0C2F1E] text-[#FDB913]' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      Peso {macro.pesoEstimado}%
+                    </span>
+                  </div>
                 </div>
 
                 <div
@@ -749,7 +762,7 @@ export const EditalVerticalizado: React.FC = () => {
                     isSelected ? 'text-orange-400' : 'text-slate-500'
                   }`}
                 >
-                  Macro {index + 1}
+                  Pareto #{index + 1}
                 </div>
                 <h3 className="text-sm sm:text-base font-display font-extrabold tracking-tight leading-snug">
                   {macro.nome}
@@ -811,7 +824,7 @@ export const EditalVerticalizado: React.FC = () => {
                 id="tab-macro-todas"
                 aria-pressed={selectedMacro === 'todas'}
                 onClick={() => setSelectedMacro('todas')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
                   selectedMacro === 'todas'
                     ? 'bg-[#071F14] text-[#FDB913]'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -821,7 +834,7 @@ export const EditalVerticalizado: React.FC = () => {
                 <span>Todas ({totalItems})</span>
               </button>
 
-              {MACRO_DIVISOES.map((macro) => {
+              {orderedMacroDivisoes.map((macro) => {
                 const isActive = selectedMacro === macro.id;
                 const stats = getMacroStats(macro.id);
 
@@ -832,7 +845,7 @@ export const EditalVerticalizado: React.FC = () => {
                     id={`tab-macro-btn-${macro.id}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedMacro(macro.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
                       isActive
                         ? 'bg-[#008542] text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -872,7 +885,7 @@ export const EditalVerticalizado: React.FC = () => {
                 type="button"
                 aria-pressed={selectedOrigin === opt.id}
                 onClick={() => setSelectedOrigin(opt.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
                   selectedOrigin === opt.id
                     ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -900,7 +913,7 @@ export const EditalVerticalizado: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filtrar tópicos (ex: Bernoulli, 4-20 mA, Carnot, Clapeyron, Refino, NR-33, TP-12, PB-B3)..."
-              className="w-full pl-9 pr-4 py-2 bg-[#F6F8F7] border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542] transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-[#F6F8F7] border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542] transition-[border-color,box-shadow] duration-150"
             />
           </div>
 
@@ -1121,6 +1134,10 @@ export const EditalVerticalizado: React.FC = () => {
                                     showCodes
                                     codigoTranspetro={item.codigoTranspetro}
                                     codigoPetrobras={item.codigoPetrobras}
+                                  />
+                                  <SubjectBaseBadge
+                                    category={classifyTopicById(item.id)}
+                                    showPhaseHint
                                   />
                                   {getPriorityBadge(item.priority)}
                                   {getStatusBadge(prog.status)}

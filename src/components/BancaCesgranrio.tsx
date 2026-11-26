@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BANCA_PROFILE, PARES_CONCEITUAIS_IRMAOS } from '../data/bancaData';
-import { Card, StatusBadge, Button, EmptyState, OriginBadge } from './ui';
+import { Card, StatusBadge, Button, EmptyState, OriginBadge, SubjectBaseBadge } from './ui';
 import type { OrigemEdital } from './ui/OriginBadge';
+import { classifyByCodigoRef } from '../utils/subjectClassification';
+import { sortItemsByCodigoRefPareto } from '../utils/paretoOrdering';
 import {
   AlertTriangle,
   Sparkles,
@@ -18,26 +20,33 @@ export const BancaCesgranrio: React.FC = () => {
   const [selectedOrigin, setSelectedOrigin] = useState<'todas' | OrigemEdital>('todas');
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
-  const disciplines = Array.from(new Set(PARES_CONCEITUAIS_IRMAOS.map((p) => p.discipline)));
+  const orderedParesBase = useMemo(() => sortItemsByCodigoRefPareto(PARES_CONCEITUAIS_IRMAOS), []);
 
-  const filteredPares = PARES_CONCEITUAIS_IRMAOS.filter((par) => {
+  const disciplines = useMemo(
+    () => Array.from(new Set(orderedParesBase.map((p) => p.discipline))),
+    [orderedParesBase]
+  );
+
+  const filteredPares = useMemo(() => {
     const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      searchTerm === '' ||
-      par.conceptA.toLowerCase().includes(q) ||
-      par.conceptB.toLowerCase().includes(q) ||
-      par.difference.toLowerCase().includes(q) ||
-      par.bancaTrap.toLowerCase().includes(q) ||
-      (par.codigoRef && par.codigoRef.toLowerCase().includes(q));
+    return orderedParesBase.filter((par) => {
+      const matchesSearch =
+        searchTerm === '' ||
+        par.conceptA.toLowerCase().includes(q) ||
+        par.conceptB.toLowerCase().includes(q) ||
+        par.difference.toLowerCase().includes(q) ||
+        par.bancaTrap.toLowerCase().includes(q) ||
+        (par.codigoRef && par.codigoRef.toLowerCase().includes(q));
 
-    const matchesDisc =
-      selectedDiscipline === 'todas' ||
-      par.discipline.toLowerCase().includes(selectedDiscipline.toLowerCase());
+      const matchesDisc =
+        selectedDiscipline === 'todas' ||
+        par.discipline.toLowerCase().includes(selectedDiscipline.toLowerCase());
 
-    const matchesOrigin = selectedOrigin === 'todas' || par.origem === selectedOrigin;
+      const matchesOrigin = selectedOrigin === 'todas' || par.origem === selectedOrigin;
 
-    return matchesSearch && matchesDisc && matchesOrigin;
-  });
+      return matchesSearch && matchesDisc && matchesOrigin;
+    });
+  }, [orderedParesBase, searchTerm, selectedDiscipline, selectedOrigin]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -184,6 +193,9 @@ export const BancaCesgranrio: React.FC = () => {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <OriginBadge origem={par.origem} />
+                      {classifyByCodigoRef(par.codigoRef).badges.map((cat) => (
+                        <SubjectBaseBadge key={cat} category={cat} compact />
+                      ))}
                       <StatusBadge tone="neutral">{par.discipline}</StatusBadge>
                       {par.codigoRef && (
                         <span className="text-[11px] font-mono text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">

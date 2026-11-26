@@ -67,7 +67,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ activeTab, setAc
                 {isActive && (
                   <motion.div
                     layoutId="activeNavIndicator"
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                     className="absolute inset-0 bg-[#071F14] rounded-xl shadow-2xs border-b-2 border-orange-500"
                     aria-hidden="true"
                   />

@@ -226,7 +226,7 @@ Animações observadas:
 - Motion no indicador da aba ativa.
 - `MotionConfig reducedMotion="user"` e regra CSS para `prefers-reduced-motion`.
 
-Diretriz: reutilizar Motion e CSS existentes; respeitar movimento reduzido; não instalar biblioteca redundante sem justificativa.
+Diretriz: reutilizar Motion e CSS existentes; respeitar movimento reduzido; não instalar biblioteca redundante sem justificativa. Para padrões permanentes de auditoria visual, microcopy, espaçamento, cores, ícones e animações, consultar [`UNSLOP_DIRETRIZES_PROJETO.md`](./UNSLOP_DIRETRIZES_PROJETO.md) (metodologia **unslop** por Damir Sokolovsky, CC BY 4.0, adaptada ao projeto).
 
 ## 10. Arquivos sensíveis
 
@@ -247,7 +247,7 @@ Não incluir chaves reais, tokens ou segredos em documentação ou prompts. `.en
 ## 11. Protocolo para futuras atualizações
 
 Antes de implementar:
-1. Ler este inventário e inspecionar o código atual.
+1. Ler este inventário, [`UNSLOP_DIRETRIZES_PROJETO.md`](./UNSLOP_DIRETRIZES_PROJETO.md) e inspecionar o código atual.
 2. Verificar se a função já existe.
 3. Classificar: compatível, adaptável, redundante, incompatível ou desnecessária.
 4. Mapear arquivos, dados e fluxos afetados.

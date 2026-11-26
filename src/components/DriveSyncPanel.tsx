@@ -125,7 +125,7 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
       });
 
       setStatusType('success');
-      setStatusText('Sincronização concluída com sucesso!');
+      setStatusText('Sincronização concluída com sucesso.');
       setIsValidated(true);
       setLastSync(new Date().toLocaleString('pt-BR'));
       setHasSafetyBackup(Boolean(getPreSyncSafetyBackup()));
@@ -427,7 +427,7 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
                   onClick={handleCopyScript}
                   leftIcon={codeCopied ? <Check className="w-3.5 h-3.5 text-[#008542]" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
                 >
-                  {codeCopied ? 'Copiado!' : 'Copiar Código'}
+                  {codeCopied ? 'Copiado' : 'Copiar código'}
                 </Button>
               </div>
               <pre className="bg-[#071F14] text-[#FDB913] p-3.5 rounded-xl text-[11px] font-mono overflow-x-auto max-h-60 leading-relaxed select-all border border-[#123826]">

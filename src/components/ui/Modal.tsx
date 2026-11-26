@@ -14,6 +14,8 @@ export interface ModalProps {
   footer?: React.ReactNode;
   closeOnBackdrop?: boolean;
   ariaLabel?: string;
+  panelClassName?: string;
+  hideHeader?: boolean;
 }
 
 const WIDTH_CLASSES: Record<NonNullable<ModalProps['maxWidth']>, string> = {
@@ -37,6 +39,8 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   closeOnBackdrop = true,
   ariaLabel,
+  panelClassName = '',
+  hideHeader = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -109,7 +113,7 @@ export const Modal: React.FC<ModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#04140D]/75 backdrop-blur-xs overflow-y-auto"
           onClick={closeOnBackdrop ? onClose : undefined}
         >
@@ -119,18 +123,18 @@ export const Modal: React.FC<ModalProps> = ({
             aria-modal="true"
             aria-label={ariaLabel || title || 'Janela de diálogo'}
             tabIndex={-1}
-            initial={{ opacity: 0, y: 14, scale: 0.98 }}
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className={`w-full ${WIDTH_CLASSES[maxWidth]} rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] outline-none ${
               theme === 'dark'
                 ? 'bg-[#071F14] text-white border border-[#123826]'
                 : 'bg-white text-slate-900 border border-slate-200'
-            }`}
+            } ${panelClassName}`}
           >
-            {title && (
+            {title && !hideHeader && (
               <div className="bg-[#071F14] border-b border-[#133B28] text-white shrink-0 relative">
                 <div className="h-1 w-full bg-gradient-to-r from-[#008542] via-[#FDB913] to-[#F97316]" aria-hidden="true" />
                 <div className="px-5 py-4 sm:px-6 flex items-center justify-between gap-4">

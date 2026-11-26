@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MATERIAL_ESTUDOS } from '../data/materialEstudosData';
 import { MindMapSection, MindMapItem } from './MindMapSection';
-import { MaterialLinksSection } from './MaterialLinksSection';
 import { OriginBadge } from './ui/OriginBadge';
+import { SubjectBaseBadge } from './ui/SubjectBaseBadge';
+import { classifyByCodigoRef, classifyModuleId } from '../utils/subjectClassification';
+import { sortMaterialModulesByPareto, sortItemsByCodigoRefPareto } from '../utils/paretoOrdering';
 import { 
   BookOpen, 
   Calculator, 
@@ -10,11 +12,7 @@ import {
   Search, 
   Lightbulb, 
   Table, 
-  ChevronRight,
-  Layers,
-  Link as LinkIcon,
-  Sparkles,
-  FileText
+  ChevronRight
 } from 'lucide-react';
 
 interface TabMaterialEstudoProps {
@@ -22,15 +20,17 @@ interface TabMaterialEstudoProps {
 }
 
 export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalculator }) => {
+  const orderedModules = useMemo(() => sortMaterialModulesByPareto(MATERIAL_ESTUDOS), []);
+
   const [moduloAtivo, setModuloAtivo] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('transpetro_material_selected_modulo');
       if (saved && MATERIAL_ESTUDOS.some((m) => m.id === saved)) {
         return saved;
       }
-      return 'instrumentacao';
+      return orderedModules[0]?.id || 'quimica_processos';
     } catch {
-      return 'instrumentacao';
+      return orderedModules[0]?.id || 'quimica_processos';
     }
   });
 
@@ -82,13 +82,17 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
     }));
   };
 
-  const moduloSelecionado = MATERIAL_ESTUDOS.find(m => m.id === moduloAtivo) || MATERIAL_ESTUDOS[0];
+  const moduloSelecionado =
+    orderedModules.find((m) => m.id === moduloAtivo) || orderedModules[0];
 
-  const secoesFiltradas = moduloSelecionado.secoes.filter(s => {
-    if (!busca) return true;
-    const termo = busca.toLowerCase();
-    return s.titulo.toLowerCase().includes(termo) || s.conteudoMarkdown.toLowerCase().includes(termo);
-  });
+  const secoesFiltradas = useMemo(() => {
+    const filtered = moduloSelecionado.secoes.filter((s) => {
+      if (!busca) return true;
+      const termo = busca.toLowerCase();
+      return s.titulo.toLowerCase().includes(termo) || s.conteudoMarkdown.toLowerCase().includes(termo);
+    });
+    return sortItemsByCodigoRefPareto(filtered);
+  }, [moduloSelecionado, busca]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -106,7 +110,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-3xl mt-1 leading-relaxed">
               Síntese teórica, quadros comparativos, normas técnicas/NRs, fórmulas matemáticas, pontos focais de prova,
-              <strong> mapas mentais em imagem/PDF</strong>, <strong>anotações pessoais</strong> e <strong>cards de links para arquivos externos</strong>.
+              <strong> mapas mentais em imagem/PDF</strong> e <strong>anotações pessoais</strong>.
             </p>
           </div>
 
@@ -124,7 +128,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
 
         {/* Module Selector Pills */}
         <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-          {MATERIAL_ESTUDOS.map((mod) => (
+          {orderedModules.map((mod) => (
             <button
               key={mod.id}
               id={`pill-modulo-${mod.id}`}
@@ -149,8 +153,11 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
         {/* Module Subtitle & Search */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <div>
-            <h3 className="text-base font-bold text-slate-900">{moduloSelecionado.titulo}</h3>
-            <p className="text-xs text-slate-500">{moduloSelecionado.subtitulo}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900">{moduloSelecionado.titulo}</h3>
+              <SubjectBaseBadge category={classifyModuleId(moduloSelecionado.id)} compact />
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">{moduloSelecionado.subtitulo}</p>
           </div>
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -183,6 +190,9 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                   </h4>
                   <div className="flex flex-wrap items-center gap-2">
                     <OriginBadge origem={secao.origem} />
+                    {classifyByCodigoRef(secao.codigoRef).badges.map((cat) => (
+                      <SubjectBaseBadge key={cat} category={cat} compact />
+                    ))}
                     {secao.codigoRef && (
                       <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                         {secao.codigoRef}
@@ -299,14 +309,6 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
               <p className="text-slate-500 text-sm">Nenhum conteúdo encontrado para a busca "{busca}".</p>
             </div>
           )}
-        </div>
-
-        {/* SEÇÃO 2: Cards de Links para Arquivos Externos (Abaixo dos cards da imagem) */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs">
-          <MaterialLinksSection
-            moduloId={moduloSelecionado.id}
-            moduloTitulo={moduloSelecionado.titulo}
-          />
         </div>
       </div>
     </div>

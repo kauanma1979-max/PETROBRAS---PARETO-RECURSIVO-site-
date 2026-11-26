@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { CUT_RULES_DATA } from '../data/cutRulesData';
-import { Card, StatusBadge, OriginBadge } from './ui';
+import { Card, StatusBadge, OriginBadge, SubjectBaseBadge } from './ui';
 import { Scissors, Zap, TrendingUp, Award, XCircle, Filter } from 'lucide-react';
 import type { OrigemEdital } from './ui/OriginBadge';
+import { classifyByCodigoRef } from '../utils/subjectClassification';
+import { sortItemsByCodigoRefPareto } from '../utils/paretoOrdering';
 
 export const CutRules: React.FC = () => {
   const [selectedOrigin, setSelectedOrigin] = useState<'todas' | OrigemEdital>('todas');
 
-  const filteredRules = CUT_RULES_DATA.filter(
-    (r) => selectedOrigin === 'todas' || r.origem === selectedOrigin
+  const filteredRules = useMemo(
+    () =>
+      sortItemsByCodigoRefPareto(
+        CUT_RULES_DATA.filter(
+          (r) => selectedOrigin === 'todas' || r.origem === selectedOrigin
+        )
+      ),
+    [selectedOrigin]
   );
 
   const priorizar = filteredRules.filter((r) => r.action === 'PRIORIZAR');
@@ -128,6 +136,9 @@ export const CutRules: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusBadge tone="success">PRIORIZAR</StatusBadge>
                       <OriginBadge origem={rule.origem} />
+                      {classifyByCodigoRef(rule.codigoRef).badges.map((cat) => (
+                        <SubjectBaseBadge key={cat} category={cat} compact />
+                      ))}
                     </div>
                     {rule.codigoRef && (
                       <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
@@ -165,6 +176,9 @@ export const CutRules: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusBadge tone="warning">REDUZIR</StatusBadge>
                       <OriginBadge origem={rule.origem} />
+                      {classifyByCodigoRef(rule.codigoRef).badges.map((cat) => (
+                        <SubjectBaseBadge key={cat} category={cat} compact />
+                      ))}
                     </div>
                     {rule.codigoRef && (
                       <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
@@ -202,6 +216,9 @@ export const CutRules: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusBadge tone="danger">CORTAR</StatusBadge>
                       <OriginBadge origem={rule.origem} />
+                      {classifyByCodigoRef(rule.codigoRef).badges.map((cat) => (
+                        <SubjectBaseBadge key={cat} category={cat} compact />
+                      ))}
                     </div>
                     {rule.codigoRef && (
                       <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { PARETO_MATRIX, PARETO_SOURCE_STATS } from '../data/paretoData';
-import { Card, Button, StatusBadge, EmptyState, OriginBadge } from './ui';
+import { Card, Button, StatusBadge, EmptyState, OriginBadge, SubjectBaseBadge } from './ui';
 import type { OrigemEdital } from './ui/OriginBadge';
+import { classifyByCodigoRef, classifyMacroArea } from '../utils/subjectClassification';
+import { sortParetoMacros, sortMesosByPareto, sortMicrosByPareto } from '../utils/paretoOrdering';
 import {
   Search,
   Filter,
@@ -73,16 +75,18 @@ export const ParetoMatrix: React.FC = () => {
     );
   };
 
+  const orderedMacros = useMemo(() => sortParetoMacros(PARETO_MATRIX), []);
+
   const filteredMacros = useMemo(() => {
-    return PARETO_MATRIX.filter(
+    return orderedMacros.filter(
       (macro) => selectedDiscipline === 'todas' || macro.id === selectedDiscipline
     );
-  }, [selectedDiscipline]);
+  }, [orderedMacros, selectedDiscipline]);
 
   const filteredMesoList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return filteredMacros.flatMap((macro) =>
-      macro.mesos
+      sortMesosByPareto(macro.mesos)
         .filter((meso) => {
           const matchesOrigin =
             selectedOrigin === 'todas' ||
@@ -107,9 +111,9 @@ export const ParetoMatrix: React.FC = () => {
 
   const filteredMicroList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return filteredMacros.flatMap((macro) =>
-      macro.mesos.flatMap((meso) =>
-        meso.micros
+    const list = filteredMacros.flatMap((macro) =>
+      sortMesosByPareto(macro.mesos).flatMap((meso) =>
+        sortMicrosByPareto(meso.micros)
           .filter((micro) => {
             const matchesOrigin = selectedOrigin === 'todas' || micro.origem === selectedOrigin;
             const matchesSearch =
@@ -124,6 +128,13 @@ export const ParetoMatrix: React.FC = () => {
           .map((micro) => ({ macro, meso, micro }))
       )
     );
+    return list.sort((a, b) => {
+      if (b.micro.paretoPct !== a.micro.paretoPct) return b.micro.paretoPct - a.micro.paretoPct;
+      if (b.micro.questionCount !== a.micro.questionCount) {
+        return b.micro.questionCount - a.micro.questionCount;
+      }
+      return a.micro.name.localeCompare(b.micro.name, 'pt-BR');
+    });
   }, [filteredMacros, selectedOrigin, searchQuery]);
 
   const layers = [
@@ -215,7 +226,7 @@ export const ParetoMatrix: React.FC = () => {
             >
               Todas ({totalTopics} tópicos)
             </button>
-            {PARETO_MATRIX.map((m) => (
+            {orderedMacros.map((m) => (
               <button
                 key={m.id}
                 id={`filter-disc-${m.id}`}
@@ -319,10 +330,13 @@ export const ParetoMatrix: React.FC = () => {
                   className="flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <StatusBadge tone={m.weightPct >= 30 ? 'orange' : 'success'}>
-                        Peso {m.weightPct}% ({m.questionCount}q)
-                      </StatusBadge>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StatusBadge tone={m.weightPct >= 30 ? 'orange' : 'success'}>
+                          Peso {m.weightPct}% ({m.questionCount}q)
+                        </StatusBadge>
+                        <SubjectBaseBadge category={classifyMacroArea(m.id)} compact />
+                      </div>
                       <span className="text-xs font-bold text-slate-500 font-mono tabular-nums">
                         {m.topicsCount} tópicos
                       </span>
@@ -386,6 +400,11 @@ export const ParetoMatrix: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredMesoList.map(({ macro, meso }) => {
                 const themeStyle = getThemeMeta(macro.id);
+                const mesoBadges = Array.from(
+                  new Set(
+                    meso.micros.flatMap((mic) => classifyByCodigoRef(mic.codigoRef).badges)
+                  )
+                );
                 return (
                   <Card key={meso.id} padding="md" className="flex flex-col justify-between gap-3">
                     <div className="space-y-2">
@@ -400,7 +419,12 @@ export const ParetoMatrix: React.FC = () => {
                             {macro.discipline}
                           </span>
                         </div>
-                        <OriginBadge origem={meso.origem} compact />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {mesoBadges.map((cat) => (
+                            <SubjectBaseBadge key={cat} category={cat} compact />
+                          ))}
+                          <OriginBadge origem={meso.origem} compact />
+                        </div>
                       </div>
 
                       <h4 className="text-sm sm:text-base font-display font-bold text-slate-900 leading-snug">
@@ -464,6 +488,9 @@ export const ParetoMatrix: React.FC = () => {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <OriginBadge origem={micro.origem} compact />
+                        {classifyByCodigoRef(micro.codigoRef).badges.map((cat) => (
+                          <SubjectBaseBadge key={cat} category={cat} compact />
+                        ))}
                         {getPriorityBadge(micro.priority)}
                         {micro.isNucleo80 && (
                           <StatusBadge tone="gold">Núcleo 80/20</StatusBadge>

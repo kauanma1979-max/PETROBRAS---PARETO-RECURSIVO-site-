@@ -322,7 +322,7 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
           return m;
         });
         onSaveData(secaoId, { ...customData, mindMaps: updatedMaps });
-        triggerToast('Mapa mental atualizado com sucesso!');
+        triggerToast('Mapa mental atualizado com sucesso.');
       } else {
         // Add new item
         const newItem: MindMapItem = {
@@ -336,7 +336,7 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
         };
         const updatedMaps = [newItem, ...mindMaps];
         onSaveData(secaoId, { ...customData, mindMaps: updatedMaps });
-        triggerToast('Novo mapa mental inserido com sucesso!');
+        triggerToast('Novo mapa mental inserido com sucesso.');
       }
 
       // Reset and close
@@ -407,20 +407,20 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
                   <img
                     src={map.url}
                     alt={map.titulo}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
-                  <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white gap-1.5 font-bold text-xs backdrop-blur-2xs">
+                  <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center text-white gap-1.5 font-semibold text-xs backdrop-blur-2xs">
                     <ZoomIn className="w-4 h-4" />
-                    <span>Ampliar Imagem</span>
+                    <span>Ampliar imagem</span>
                   </div>
                 </div>
               ) : (
                 <div 
                   onClick={() => setViewingMap(map)}
-                  className="h-32 bg-gradient-to-br from-rose-50 to-rose-100/60 p-4 flex flex-col items-center justify-center text-center cursor-pointer border-b border-rose-100 group-hover:from-rose-100 group-hover:to-rose-200/70 transition"
+                  className="h-32 bg-rose-50 p-4 flex flex-col items-center justify-center text-center cursor-pointer border-b border-rose-100 group-hover:bg-rose-100/70 transition-colors duration-150"
                 >
                   <div className="w-12 h-12 rounded-xl bg-white text-rose-600 shadow-xs flex items-center justify-center font-bold mb-2">
                     <FileText className="w-6 h-6" />
@@ -696,8 +696,8 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
                       onChange={(e) => setMapType(e.target.value as any)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 font-medium"
                     >
-                      <option value="image">🖼️ Imagem (PNG, JPG, WebP)</option>
-                      <option value="pdf">📄 Documento PDF</option>
+                      <option value="image">Imagem (PNG, JPG, WebP)</option>
+                      <option value="pdf">Documento PDF</option>
                     </select>
                   </div>
                 </div>
@@ -780,7 +780,7 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
                 />
               ) : (
                 <div className="w-full h-[70vh] flex flex-col items-center justify-center bg-slate-900 rounded-xl p-6 text-center text-white space-y-4">
-                  <FileText className="w-16 h-16 text-rose-500 animate-pulse" />
+                  <FileText className="w-16 h-16 text-rose-500" aria-hidden="true" />
                   <div>
                     <h5 className="text-base font-bold">{viewingMap.titulo}</h5>
                     <p className="text-xs text-slate-400 mt-1">Visualização do documento PDF</p>

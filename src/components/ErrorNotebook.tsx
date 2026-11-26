@@ -7,8 +7,11 @@ import {
   EmptyState,
   ToastBanner,
   OriginBadge,
+  SubjectBaseBadge,
 } from './ui';
 import type { OrigemEdital } from './ui/OriginBadge';
+import { classifyErrorEntry, classifyMacroArea } from '../utils/subjectClassification';
+import { getMacroParetoRank } from '../utils/paretoOrdering';
 import {
   BookOpen,
   Plus,
@@ -288,6 +291,13 @@ const normalizeStr = (str: string) => {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 };
+
+const ORDERED_CORRELACOES_DISCIPLINAS = [...CORRELACOES_DISCIPLINAS].sort((a, b) => {
+  const rankA = getMacroParetoRank(a.id);
+  const rankB = getMacroParetoRank(b.id);
+  if (rankA !== rankB) return rankA - rankB;
+  return a.nome.localeCompare(b.nome, 'pt-BR');
+});
 
 export const ErrorNotebook: React.FC = () => {
   const [errors, setErrors] = useState<ErrorEntry[]>(() => {
@@ -651,7 +661,7 @@ export const ErrorNotebook: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CORRELACOES_DISCIPLINAS.map((disc) => {
+          {ORDERED_CORRELACOES_DISCIPLINAS.map((disc) => {
             const countErros = errors.filter((e) =>
               normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey))
             ).length;
@@ -660,6 +670,7 @@ export const ErrorNotebook: React.FC = () => {
                 normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey)) && e.revisado
             ).length;
             const isAtivo = normalizeStr(filterDisc).includes(normalizeStr(disc.filtroKey));
+            const discSubject = classifyMacroArea(disc.id);
 
             return (
               <Card
@@ -674,6 +685,7 @@ export const ErrorNotebook: React.FC = () => {
                   <div className="flex items-start justify-between gap-2 mb-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <OriginBadge origem={disc.origem} compact />
+                      <SubjectBaseBadge category={discSubject} compact />
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase font-mono ${disc.colorTheme.badgeBg} ${disc.colorTheme.badgeText}`}
                       >
@@ -907,9 +919,9 @@ export const ErrorNotebook: React.FC = () => {
               </span>
               {[
                 { key: 'todas', label: 'Todos' },
-                { key: 'Instrumentação', label: 'Instrumentação' },
-                { key: 'Fluidos', label: 'Fluidos & Equip.' },
                 { key: 'Química', label: 'Química & SMS' },
+                { key: 'Fluidos', label: 'Fluidos & Equip.' },
+                { key: 'Instrumentação', label: 'Instrumentação' },
                 { key: 'Eletricidade', label: 'Eletricidade' },
                 { key: 'Português', label: 'Português' },
                 { key: 'Matemática', label: 'Matemática' },
@@ -1000,6 +1012,7 @@ export const ErrorNotebook: React.FC = () => {
             {filteredErrors.map((err) => {
               const discTheme = getDisciplineBadge(err.disciplina);
               const origem = err.origem || 'ambos';
+              const entrySubject = classifyErrorEntry(err.disciplina, err.subtopico);
 
               return (
                 <div
@@ -1013,6 +1026,7 @@ export const ErrorNotebook: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <OriginBadge origem={origem} compact />
+                      <SubjectBaseBadge category={entrySubject} compact />
                       <span className="text-[11px] font-mono tabular-nums font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                         {err.data}
                       </span>
@@ -1141,7 +1155,7 @@ export const ErrorNotebook: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, disciplina: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542] font-medium"
                 >
-                  {CORRELACOES_DISCIPLINAS.map((c) => (
+                  {ORDERED_CORRELACOES_DISCIPLINAS.map((c) => (
                     <option key={c.id} value={c.nome}>
                       {c.nome}
                     </option>

@@ -2,6 +2,16 @@
  * Centralized Backup & Restore Utility for Transpetro 2026.3 App
  */
 
+import {
+  deduplicateFocusLogs,
+  dispatchFocusUpdated,
+  FOCUS_STORAGE_KEYS,
+  normalizeRestoredPomodoroOnAppOpen,
+  type FocusLogSegment,
+  type PomodoroActiveState,
+  type StudyResumeState,
+} from './studyFocusStorage';
+
 export interface BackupDataPayload {
   version: string;
   app: string;
@@ -16,6 +26,10 @@ export interface BackupDataPayload {
     materialLinks: any[];
     scheduleDayNotes?: Record<string, string>;
     bancaNotes?: Record<string, any>;
+    pomodoroFocusLogs?: FocusLogSegment[];
+    pomodoroActiveState?: PomodoroActiveState | null;
+    studyResumeState?: StudyResumeState | null;
+    calendarSelectedDate?: string;
     otherStorageKeys?: Record<string, any>;
   };
 }
@@ -28,6 +42,7 @@ export interface BackupStats {
   materialLinksCount: number;
   scheduleNotesCount: number;
   bancaNotesCount: number;
+  focusLogsCount: number;
   totalItems: number;
 }
 
@@ -39,7 +54,11 @@ export const STORAGE_KEYS = {
   CUSTOM_MATERIALS: 'transpetro_material_estudo_custom_v1',
   MATERIAL_LINKS: 'transpetro_material_links_v1',
   SCHEDULE_DAY_NOTES: 'transpetro_schedule_day_notes',
-  BANCA_NOTES: 'transpetro_banca_notes_v1'
+  BANCA_NOTES: 'transpetro_banca_notes_v1',
+  FOCUS_LOGS: FOCUS_STORAGE_KEYS.FOCUS_LOGS,
+  POMODORO_ACTIVE_STATE: FOCUS_STORAGE_KEYS.ACTIVE_STATE,
+  STUDY_RESUME_STATE: FOCUS_STORAGE_KEYS.RESUME_STATE,
+  CALENDAR_SELECTED_DATE: FOCUS_STORAGE_KEYS.SELECTED_DATE,
 };
 
 export const notifyDataUpdated = (sourceKey?: string) => {
@@ -62,6 +81,7 @@ export const getBackupStats = (): BackupStats => {
   let materialLinksCount = 0;
   let scheduleNotesCount = 0;
   let bancaNotesCount = 0;
+  let focusLogsCount = 0;
 
   try {
     const rawDays = localStorage.getItem(STORAGE_KEYS.COMPLETED_DAYS);
@@ -98,6 +118,11 @@ export const getBackupStats = (): BackupStats => {
     if (rawBancaNotes) bancaNotesCount = Object.keys(JSON.parse(rawBancaNotes)).length || 0;
   } catch (e) { /* ignore */ }
 
+  try {
+    const rawFocusLogs = localStorage.getItem(STORAGE_KEYS.FOCUS_LOGS);
+    if (rawFocusLogs) focusLogsCount = deduplicateFocusLogs(JSON.parse(rawFocusLogs)).length || 0;
+  } catch (e) { /* ignore */ }
+
   return {
     completedDaysCount,
     errorNotebookCount,
@@ -106,7 +131,8 @@ export const getBackupStats = (): BackupStats => {
     materialLinksCount,
     scheduleNotesCount,
     bancaNotesCount,
-    totalItems: completedDaysCount + errorNotebookCount + verticalTopicsCount + customMaterialsCount + materialLinksCount + scheduleNotesCount + bancaNotesCount
+    focusLogsCount,
+    totalItems: completedDaysCount + errorNotebookCount + verticalTopicsCount + customMaterialsCount + materialLinksCount + scheduleNotesCount + bancaNotesCount + focusLogsCount
   };
 };
 
@@ -125,6 +151,10 @@ export const generateBackupPayload = (): BackupDataPayload => {
       materialLinks: [],
       scheduleDayNotes: {},
       bancaNotes: {},
+      pomodoroFocusLogs: [],
+      pomodoroActiveState: null,
+      studyResumeState: null,
+      calendarSelectedDate: undefined,
       otherStorageKeys: {}
     }
   };
@@ -167,6 +197,26 @@ export const generateBackupPayload = (): BackupDataPayload => {
   try {
     const bancaNotes = localStorage.getItem(STORAGE_KEYS.BANCA_NOTES);
     if (bancaNotes) payload.data.bancaNotes = JSON.parse(bancaNotes);
+  } catch (e) { /* ignore */ }
+
+  try {
+    const rawFocusLogs = localStorage.getItem(STORAGE_KEYS.FOCUS_LOGS);
+    if (rawFocusLogs) payload.data.pomodoroFocusLogs = deduplicateFocusLogs(JSON.parse(rawFocusLogs));
+  } catch (e) { /* ignore */ }
+
+  try {
+    const rawActiveState = localStorage.getItem(STORAGE_KEYS.POMODORO_ACTIVE_STATE);
+    if (rawActiveState) payload.data.pomodoroActiveState = JSON.parse(rawActiveState);
+  } catch (e) { /* ignore */ }
+
+  try {
+    const rawResumeState = localStorage.getItem(STORAGE_KEYS.STUDY_RESUME_STATE);
+    if (rawResumeState) payload.data.studyResumeState = JSON.parse(rawResumeState);
+  } catch (e) { /* ignore */ }
+
+  try {
+    const rawSelectedDate = localStorage.getItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE);
+    if (rawSelectedDate) payload.data.calendarSelectedDate = rawSelectedDate;
   } catch (e) { /* ignore */ }
 
   // Grab any additional transpetro keys if existing
@@ -288,6 +338,28 @@ export const restoreFromRawData = (dataObj: any): { success: boolean; message: s
       localStorage.setItem(STORAGE_KEYS.BANCA_NOTES, JSON.stringify(payload.bancaNotes));
     }
 
+    if (payload.pomodoroFocusLogs && Array.isArray(payload.pomodoroFocusLogs)) {
+      const cleanLogs = deduplicateFocusLogs(payload.pomodoroFocusLogs);
+      localStorage.setItem(STORAGE_KEYS.FOCUS_LOGS, JSON.stringify(cleanLogs));
+    }
+
+    if (payload.pomodoroActiveState && typeof payload.pomodoroActiveState === 'object') {
+      const normalized = normalizeRestoredPomodoroOnAppOpen(payload.pomodoroActiveState);
+      if (normalized) {
+        localStorage.setItem(STORAGE_KEYS.POMODORO_ACTIVE_STATE, JSON.stringify(normalized));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.POMODORO_ACTIVE_STATE);
+      }
+    }
+
+    if (payload.studyResumeState && typeof payload.studyResumeState === 'object') {
+      localStorage.setItem(STORAGE_KEYS.STUDY_RESUME_STATE, JSON.stringify(payload.studyResumeState));
+    }
+
+    if (typeof payload.calendarSelectedDate === 'string' && payload.calendarSelectedDate.trim()) {
+      localStorage.setItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE, payload.calendarSelectedDate.trim());
+    }
+
     if (payload.otherStorageKeys && typeof payload.otherStorageKeys === 'object') {
       Object.entries(payload.otherStorageKeys).forEach(([k, v]) => {
         if (typeof v === 'string') {
@@ -299,11 +371,12 @@ export const restoreFromRawData = (dataObj: any): { success: boolean; message: s
     }
 
     notifyDataUpdated();
+    dispatchFocusUpdated();
 
     const stats = getBackupStats();
     return {
       success: true,
-      message: `Backup restaurado com sucesso! Foram carregadas ${stats.completedDaysCount} sessões concluídas, ${stats.verticalTopicsCount} tópicos do edital, ${stats.errorNotebookCount} registros no caderno de erros e ${stats.materialLinksCount} links/arquivos de materiais.`,
+      message: `Backup restaurado com sucesso! Foram carregadas ${stats.completedDaysCount} sessões concluídas, ${stats.verticalTopicsCount} tópicos do edital, ${stats.errorNotebookCount} registros no caderno de erros, ${stats.materialLinksCount} links/arquivos de materiais e ${stats.focusLogsCount} registros de foco.`,
       stats
     };
   } catch (err: any) {

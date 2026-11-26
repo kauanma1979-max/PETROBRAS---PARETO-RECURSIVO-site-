@@ -20,6 +20,9 @@ import {
   Save,
   Check
 } from 'lucide-react';
+import { SubjectBaseBadge } from './ui/SubjectBaseBadge';
+import { classifyModuleId } from '../utils/subjectClassification';
+import { getMacroParetoRank, sortMacrosByPareto } from '../utils/paretoOrdering';
 
 export interface MaterialLinkItem {
   id: string;
@@ -149,10 +152,12 @@ interface MaterialLinksSectionProps {
 }
 
 export const MODULOS_OPCOES = [
-  { id: 'instrumentacao', nome: 'Instrumentação & Controle' },
-  { id: 'mecanica_fluidos', nome: 'Mecânica, Fluidos & Equip.' },
-  { id: 'quimica_processos', nome: 'Química, Refino & SMS' },
-  { id: 'eletricidade', nome: 'Eletricidade & Eletrônica' },
+  ...sortMacrosByPareto([
+    { id: 'instrumentacao', nome: 'Instrumentação & Controle' },
+    { id: 'mecanica_fluidos', nome: 'Mecânica, Fluidos & Equip.' },
+    { id: 'quimica_processos', nome: 'Química, Refino & SMS' },
+    { id: 'eletricidade', nome: 'Eletricidade & Eletrônica' },
+  ]),
   { id: 'geral', nome: 'Geral TP + PB' }
 ];
 
@@ -188,7 +193,7 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
   const [formTitulo, setFormTitulo] = useState<string>('');
   const [formUrl, setFormUrl] = useState<string>('');
   const [formTipo, setFormTipo] = useState<MaterialLinkItem['tipo']>('pdf');
-  const [formModuloId, setFormModuloId] = useState<string>(moduloId !== 'todos' ? moduloId : 'instrumentacao');
+  const [formModuloId, setFormModuloId] = useState<string>(moduloId !== 'todos' ? moduloId : 'quimica_processos');
   const [formDescricao, setFormDescricao] = useState<string>('');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -239,37 +244,44 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
   // Filter links
   const isGlobalView = showAllModulesFilter || moduloId === 'todos';
 
-  const visibleLinks = links.filter(l => {
-    // Section specific filtering if in a sub-section
-    if (secaoId && l.secaoId && l.secaoId !== secaoId) {
-      return false;
-    }
+  const visibleLinks = links
+    .filter(l => {
+      // Section specific filtering if in a sub-section
+      if (secaoId && l.secaoId && l.secaoId !== secaoId) {
+        return false;
+      }
 
-    // Module filtering
-    if (!isGlobalView) {
-      if (l.moduloId !== moduloId && l.moduloId !== 'geral') return false;
-    } else {
-      if (filterModulo !== 'todos' && l.moduloId !== filterModulo) return false;
-    }
+      // Module filtering
+      if (!isGlobalView) {
+        if (l.moduloId !== moduloId && l.moduloId !== 'geral') return false;
+      } else {
+        if (filterModulo !== 'todos' && l.moduloId !== filterModulo) return false;
+      }
 
-    // Text search query filtering
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = l.titulo.toLowerCase().includes(q);
-      const matchDesc = l.descricao?.toLowerCase().includes(q);
-      const matchUrl = l.url.toLowerCase().includes(q);
-      return matchTitle || matchDesc || matchUrl;
-    }
+      // Text search query filtering
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = l.titulo.toLowerCase().includes(q);
+        const matchDesc = l.descricao?.toLowerCase().includes(q);
+        const matchUrl = l.url.toLowerCase().includes(q);
+        return matchTitle || matchDesc || matchUrl;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      const rankA = getMacroParetoRank(a.moduloId);
+      const rankB = getMacroParetoRank(b.moduloId);
+      if (rankA !== rankB) return rankA - rankB;
+      return 0;
+    });
 
   const handleOpenAdd = () => {
     setEditingItem(null);
     setFormTitulo('');
     setFormUrl('');
     setFormTipo('pdf');
-    setFormModuloId(moduloId !== 'todos' ? moduloId : (filterModulo !== 'todos' ? filterModulo : 'instrumentacao'));
+    setFormModuloId(moduloId !== 'todos' ? moduloId : (filterModulo !== 'todos' ? filterModulo : 'quimica_processos'));
     setFormDescricao('');
     setFormError(null);
     setShowModal(true);
@@ -319,7 +331,7 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
             }
           : item
       ));
-      triggerToast('Card de material atualizado com sucesso!');
+      triggerToast('Card de material atualizado com sucesso.');
     } else {
       // Add mode
       const newItem: MaterialLinkItem = {
@@ -333,7 +345,7 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
         dataAdicionado: new Date().toLocaleDateString('pt-BR')
       };
       setLinks(prev => [newItem, ...prev]);
-      triggerToast('Novo card de material adicionado com sucesso!');
+      triggerToast('Novo card de material adicionado com sucesso.');
     }
 
     setShowModal(false);
@@ -350,7 +362,7 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
       navigator.clipboard.writeText(item.url);
       setCopiedId(item.id);
       setTimeout(() => setCopiedId(null), 2000);
-      triggerToast('Link copiado para a Área de Transferência!');
+      triggerToast('Link copiado para a área de transferência.');
     } catch (e) {
       triggerToast('Link selecionado para cópia.');
     }
@@ -394,29 +406,29 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
     <div className="space-y-5">
       {/* Toast Feedback */}
       {actionToast && (
-        <div className="bg-blue-600 text-white text-xs px-3.5 py-2 rounded-xl shadow-md flex items-center gap-2 animate-fadeIn font-medium">
-          <Check className="w-4 h-4 shrink-0" />
+        <div className="bg-[#071F14] text-white text-xs px-3.5 py-2 rounded-xl border border-[#123826] flex items-center gap-2 animate-fadeIn font-medium">
+          <Check className="w-4 h-4 shrink-0 text-[#FDB913]" aria-hidden="true" />
           <span>{actionToast}</span>
         </div>
       )}
 
       {/* Header of Links Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 p-4 sm:p-5 rounded-2xl border border-blue-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#F6F8F7] p-4 sm:p-5 rounded-2xl border border-[#DCE4DF]">
         <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-            <FolderOpen className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-[#071F14] text-[#FDB913] flex items-center justify-center shrink-0 mt-0.5">
+            <FolderOpen className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold tracking-wide uppercase">
-                {isGlobalView ? 'Central de Estudos' : 'Material Complementar'}
+              <span className="px-2 py-0.5 bg-[#E6F4EC] text-[#006837] border border-[#008542]/20 rounded-md text-[11px] font-semibold">
+                {isGlobalView ? 'Central de estudos' : 'Material complementar'}
               </span>
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-semibold border border-slate-200">
+              <span className="px-2 py-0.5 bg-white text-slate-700 rounded-md text-[11px] font-mono tabular-nums font-medium border border-slate-200">
                 {visibleLinks.length} {visibleLinks.length === 1 ? 'material' : 'materiais'}
               </span>
             </div>
-            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-              {isGlobalView ? 'Acesso Rápido a Materiais, Arquivos & Links de Apoio' : 'Materiais & Arquivos de Apoio'}
+            <h3 className="text-base sm:text-lg font-display font-bold text-slate-900 tracking-tight">
+              {isGlobalView ? 'Acesso Rápido a Materiais, Arquivos e Links de Apoio' : 'Materiais e Arquivos de Apoio'}
             </h3>
             <p className="text-xs text-slate-600 mt-0.5 max-w-2xl leading-relaxed">
               {isGlobalView 
@@ -428,11 +440,12 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
 
         <button
           id={`btn-add-link-${moduloId}`}
+          type="button"
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:shadow-md transition cursor-pointer self-start md:self-center shrink-0 w-full sm:w-auto"
+          className="px-4 py-2.5 rounded-xl bg-[#008542] hover:bg-[#006837] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer self-start md:self-center shrink-0 w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Adicionar Card de Material</span>
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          <span>Adicionar card de material</span>
         </button>
       </div>
 
@@ -525,6 +538,7 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
                         {moduloInfo.label}
                       </span>
                     )}
+                    <SubjectBaseBadge category={classifyModuleId(item.moduloId)} compact />
                   </div>
 
                   <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition">
@@ -690,14 +704,14 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
                     onChange={(e) => setFormTipo(e.target.value as any)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 font-medium"
                   >
-                    <option value="pdf">📄 Documento PDF / Apostila</option>
-                    <option value="planilha">📊 Planilha Excel / Google Sheets</option>
-                    <option value="drive">📁 Pasta Google Drive / Nuvem</option>
-                    <option value="notion">💡 Notion / Resumo Esquematizado</option>
-                    <option value="questoes">🎯 Banco de Questões / Simulado</option>
-                    <option value="video">🎬 Videoaula / Gravação</option>
-                    <option value="web">🌐 Link Web / Artigo Oficial</option>
-                    <option value="outro">📦 Outro Material</option>
+                    <option value="pdf">Documento PDF / Apostila</option>
+                    <option value="planilha">Planilha Excel / Google Sheets</option>
+                    <option value="drive">Pasta Google Drive / Nuvem</option>
+                    <option value="notion">Notion / Resumo Esquematizado</option>
+                    <option value="questoes">Banco de Questões / Simulado</option>
+                    <option value="video">Videoaula / Gravação</option>
+                    <option value="web">Link Web / Artigo Oficial</option>
+                    <option value="outro">Outro Material</option>
                   </select>
                 </div>
 
