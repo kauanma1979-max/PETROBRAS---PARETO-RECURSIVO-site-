@@ -1,0 +1,331 @@
+{
+  "inventory_version": "1.0",
+  "project": "Plataforma Petrobras/Transpetro — Pareto Recursivo",
+  "audit_basis": "ZIP enviado em 2026-11-25",
+  "audit_type": "static_source_inspection",
+  "original_source_files_modified": false,
+  "navigation_tabs": [
+    {
+      "id": "edital",
+      "label": "Edital (Em Breve)",
+      "component": "EditalSummary"
+    },
+    {
+      "id": "verticalizado",
+      "label": "Edital Verticalizado",
+      "component": "EditalVerticalizado"
+    },
+    {
+      "id": "pareto",
+      "label": "Pareto Recursivo",
+      "component": "ParetoMatrix"
+    },
+    {
+      "id": "material",
+      "label": "Material de Estudos",
+      "component": "TabMaterialEstudo"
+    },
+    {
+      "id": "cronograma",
+      "label": "Ciclos de Estudo",
+      "component": "StudySchedule"
+    },
+    {
+      "id": "cortes",
+      "label": "Regras de Corte",
+      "component": "CutRules"
+    },
+    {
+      "id": "banca",
+      "label": "Raio-X Bancas",
+      "component": "BancaCesgranrio"
+    },
+    {
+      "id": "caderno",
+      "label": "Caderno de Erros",
+      "component": "ErrorNotebook"
+    }
+  ],
+  "components": [
+    {
+      "file": "App.tsx",
+      "responsibility": "Composição principal; controla aba ativa, progresso, modais, restauração e eventos de sincronização."
+    },
+    {
+      "file": "Header.tsx",
+      "responsibility": "Cabeçalho, indicadores de progresso e ações globais."
+    },
+    {
+      "file": "NavigationTabs.tsx",
+      "responsibility": "Navegação principal por oito abas, com indicador animado."
+    },
+    {
+      "file": "EditalSummary.tsx",
+      "responsibility": "Resumo/estado dos editais e atalhos de navegação."
+    },
+    {
+      "file": "EditalVerticalizado.tsx",
+      "responsibility": "Conteúdo programático unificado, filtros e progresso por tópico."
+    },
+    {
+      "file": "ParetoMatrix.tsx",
+      "responsibility": "Matriz Pareto macro/meso/micro, pesos, incidência e núcleo prioritário."
+    },
+    {
+      "file": "TabMaterialEstudo.tsx",
+      "responsibility": "Material de estudos por módulo e seção; integra calculadora, links e mapas mentais."
+    },
+    {
+      "file": "MaterialLinksSection.tsx",
+      "responsibility": "Cadastro, edição e apresentação de links e arquivos de apoio."
+    },
+    {
+      "file": "MindMapSection.tsx",
+      "responsibility": "Cadastro, edição e visualização de mapas mentais."
+    },
+    {
+      "file": "StudySchedule.tsx",
+      "responsibility": "Ciclos, sessões, blocos, filtros e anotações."
+    },
+    {
+      "file": "DailySessionModal.tsx",
+      "responsibility": "Cronômetro/execução e conclusão de sessão."
+    },
+    {
+      "file": "CutRules.tsx",
+      "responsibility": "Regras de priorização, redução e corte de conteúdos."
+    },
+    {
+      "file": "BancaCesgranrio.tsx",
+      "responsibility": "Perfil comparativo Cesgranrio/Cebraspe e pares conceituais."
+    },
+    {
+      "file": "ErrorNotebook.tsx",
+      "responsibility": "Caderno de erros e indicadores/projeções de rendimento."
+    },
+    {
+      "file": "FormulaCalculatorModal.tsx",
+      "responsibility": "Calculadora/modal de fórmulas."
+    },
+    {
+      "file": "BackupRestoreModal.tsx",
+      "responsibility": "Exportação, importação/restauração e acesso ao Drive."
+    },
+    {
+      "file": "DriveSyncPanel.tsx",
+      "responsibility": "Configuração e operação da integração com Google Drive."
+    },
+    {
+      "file": "PetrobrasLogo.tsx",
+      "responsibility": "Componente visual de logotipo/identidade."
+    },
+    {
+      "file": "ui/Button.tsx",
+      "responsibility": "Botão reutilizável."
+    },
+    {
+      "file": "ui/Card.tsx",
+      "responsibility": "Card reutilizável."
+    },
+    {
+      "file": "ui/ConfirmDialog.tsx",
+      "responsibility": "Diálogo reutilizável de confirmação."
+    },
+    {
+      "file": "ui/EmptyState.tsx",
+      "responsibility": "Estado vazio reutilizável."
+    },
+    {
+      "file": "ui/Modal.tsx",
+      "responsibility": "Estrutura reutilizável de modal."
+    },
+    {
+      "file": "ui/OriginBadge.tsx",
+      "responsibility": "Identificação da origem: Transpetro, Petrobras ou ambos."
+    },
+    {
+      "file": "ui/ProgressBar.tsx",
+      "responsibility": "Barra de progresso reutilizável."
+    },
+    {
+      "file": "ui/StatusBadge.tsx",
+      "responsibility": "Indicador de status reutilizável."
+    },
+    {
+      "file": "ui/ToastBanner.tsx",
+      "responsibility": "Avisos/toasts reutilizáveis."
+    },
+    {
+      "file": "ui/index.ts",
+      "responsibility": "Export central dos componentes de interface."
+    }
+  ],
+  "data_sources": [
+    {
+      "file": "editalData.ts",
+      "responsibility": "Metadados dos editais-base, bancas, totais e resumo da união."
+    },
+    {
+      "file": "verticalSyllabusData.ts",
+      "responsibility": "42 tópicos unificados, macroáreas, origem, códigos, incidência, prioridade e resumo estratégico."
+    },
+    {
+      "file": "paretoData.ts",
+      "responsibility": "Matriz Pareto macro/meso/micro e estatísticas da base de provas."
+    },
+    {
+      "file": "materialEstudosData.ts",
+      "responsibility": "Conteúdo didático em módulos/seções, Markdown, fórmulas, tabelas e pontos de prova."
+    },
+    {
+      "file": "scheduleData.ts",
+      "responsibility": "Ciclos, sessões, blocos A/B, tipos de sessão, metas e totais."
+    },
+    {
+      "file": "cutRulesData.ts",
+      "responsibility": "Regras de priorizar, reduzir e cortar conteúdos."
+    },
+    {
+      "file": "bancaData.ts",
+      "responsibility": "Perfil de Cesgranrio/Cebraspe e pares conceituais."
+    }
+  ],
+  "local_storage_keys": [
+    {
+      "key": "transpetro_active_tab_v1",
+      "purpose": "Última aba selecionada."
+    },
+    {
+      "key": "transpetro_banca_notes_v1",
+      "purpose": "Anotações relacionadas às bancas."
+    },
+    {
+      "key": "transpetro_caderno_erros",
+      "purpose": "Registros do Caderno de Erros."
+    },
+    {
+      "key": "transpetro_caderno_erros_customized",
+      "purpose": "Indicador de personalização do Caderno de Erros."
+    },
+    {
+      "key": "transpetro_completed_blocks_v1",
+      "purpose": "Blocos de estudo concluídos."
+    },
+    {
+      "key": "transpetro_completed_days",
+      "purpose": "Chave legada consultada como fallback do progresso."
+    },
+    {
+      "key": "transpetro_completed_days_v2",
+      "purpose": "Progresso das sessões/ciclos concluídos."
+    },
+    {
+      "key": "transpetro_edital_verticalizado_progress_v2",
+      "purpose": "Progresso dos tópicos do edital verticalizado."
+    },
+    {
+      "key": "transpetro_material_estudo_custom_v1",
+      "purpose": "Materiais personalizados por seção."
+    },
+    {
+      "key": "transpetro_material_links_v1",
+      "purpose": "Links e arquivos de apoio."
+    },
+    {
+      "key": "transpetro_material_selected_modulo",
+      "purpose": "Módulo selecionado na área de materiais."
+    },
+    {
+      "key": "transpetro_schedule_day_notes",
+      "purpose": "Anotações por dia/sessão do cronograma."
+    },
+    {
+      "key": "transpetro_schedule_phase_filter",
+      "purpose": "Filtro de fase no cronograma."
+    },
+    {
+      "key": "transpetro_schedule_selected_ciclo",
+      "purpose": "Ciclo selecionado no cronograma."
+    },
+    {
+      "key": "transpetro_vertical_macro",
+      "purpose": "Filtro de macroárea."
+    },
+    {
+      "key": "transpetro_vertical_origem",
+      "purpose": "Filtro de origem do edital."
+    },
+    {
+      "key": "transpetro_vertical_prioridade",
+      "purpose": "Filtro de prioridade."
+    },
+    {
+      "key": "transpetro_vertical_status",
+      "purpose": "Filtro de status."
+    }
+  ],
+  "critical_files": [
+    "src/App.tsx",
+    "src/index.css",
+    "src/main.tsx",
+    "src/utils/backupStorage.ts",
+    "src/utils/driveSync.ts",
+    "src/data/editalData.ts",
+    "src/data/verticalSyllabusData.ts",
+    "src/data/paretoData.ts",
+    "src/data/materialEstudosData.ts",
+    "src/data/scheduleData.ts",
+    "src/data/cutRulesData.ts",
+    "src/data/bancaData.ts",
+    "package.json",
+    "vite.config.ts",
+    "tsconfig.json"
+  ],
+  "source_facts": {
+    "unified_topics": 42,
+    "shared_topics": 27,
+    "transpetro_only_topics": 11,
+    "petrobras_only_topics": 4,
+    "pareto_exams": 5,
+    "pareto_question_base": 270,
+    "questions_in_42_topics": 266,
+    "excluded_questions": 4,
+    "nucleus_topics": 22,
+    "nucleus_cut_pct": 81.2
+  },
+  "known_review_items": [
+    {
+      "id": "drive-client-post",
+      "severity": "high",
+      "status": "needs_implementation_and_tests",
+      "finding": "Cliente identificado chama leitura JSONP; não foi identificada chamada POST cliente. Template conter doPost não comprova upload integrado."
+    },
+    {
+      "id": "vertical-progress-schema",
+      "severity": "high",
+      "status": "needs_schema_verification",
+      "finding": "Mesclagem combina campos estudado, teoria, revisado, questoes, acertos e erros; conferir schema real da UI."
+    },
+    {
+      "id": "nested-custom-material-merge",
+      "severity": "medium",
+      "status": "needs_schema_verification",
+      "finding": "Materiais personalizados são mesclados por spread superficial; avaliar granularidade se houver objetos aninhados."
+    }
+  ],
+  "tests": {
+    "npm_install": "not_run",
+    "build": "not_run",
+    "typescript_check": "not_run",
+    "browser_regression": "not_run",
+    "google_drive_live": "not_run"
+  },
+  "preservation_rules": [
+    "Do not rebuild or redesign without explicit request.",
+    "Do not remove or rename LocalStorage keys without a migration plan.",
+    "Do not change persisted schemas without backward-compatible migration and backup.",
+    "Do not claim bidirectional Drive sync until client POST is implemented and tested.",
+    "Prefer existing Motion and CSS animation patterns.",
+    "Update this inventory only after verified changes."
+  ]
+}
