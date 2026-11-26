@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Compass,
   Download,
   RotateCcw,
   Database,
-  Cloud
+  Cloud,
+  Flame,
 } from 'lucide-react';
 import { ProgressBar } from './ui/ProgressBar';
 import { PetrobrasLogo } from './PetrobrasLogo';
+import {
+  getDistinctFocusDaysCount,
+  getWeekdayFocusStreakCount,
+  loadFocusLogs,
+} from '../utils/studyFocusStorage';
 
 interface HeaderProps {
   completedSessions: number;
@@ -28,6 +34,33 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const safeTotal = Math.max(1, totalSessions);
   const progressPercentage = Math.min(100, Math.round((completedSessions / safeTotal) * 100));
+
+  const [focusCounters, setFocusCounters] = useState<{
+    distinctDays: number;
+    streakDays: number;
+  }>(() => {
+    const logs = loadFocusLogs();
+    return {
+      distinctDays: getDistinctFocusDaysCount(logs),
+      streakDays: getWeekdayFocusStreakCount(logs),
+    };
+  });
+
+  useEffect(() => {
+    const syncCounters = () => {
+      const logs = loadFocusLogs();
+      setFocusCounters({
+        distinctDays: getDistinctFocusDaysCount(logs),
+        streakDays: getWeekdayFocusStreakCount(logs),
+      });
+    };
+    window.addEventListener('transpetro_focus_updated', syncCounters);
+    window.addEventListener('transpetro_data_restored', syncCounters);
+    return () => {
+      window.removeEventListener('transpetro_focus_updated', syncCounters);
+      window.removeEventListener('transpetro_data_restored', syncCounters);
+    };
+  }, []);
 
   return (
     <header className="bg-[#071F14] text-white border-b border-[#133B28] relative z-20">
@@ -111,6 +144,24 @@ export const Header: React.FC<HeaderProps> = ({
                   trackTheme="dark"
                   height="md"
                 />
+              </div>
+            </div>
+
+            <div
+              className="flex items-center gap-2 sm:border-l sm:border-[#1B4F36] sm:pl-3"
+              title="Contagem atrelada apenas aos dias úteis estudados (Seg–Sex). Sábados e domingos não contam como foco nem quebram a sequência."
+            >
+              <Flame className="w-4 h-4 text-[#FDB913] shrink-0" aria-hidden="true" />
+              <div>
+                <div className="text-[10px] text-slate-300 font-medium leading-tight">
+                  Foco (Seg–Sex)
+                </div>
+                <div className="text-xs font-bold text-white font-mono tabular-nums whitespace-nowrap">
+                  {focusCounters.distinctDays} {focusCounters.distinctDays === 1 ? 'dia' : 'dias'}{' '}
+                  <span className="text-[#FDB913]">
+                    · {focusCounters.streakDays} em sequência
+                  </span>
+                </div>
               </div>
             </div>
 

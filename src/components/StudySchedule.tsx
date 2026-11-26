@@ -45,6 +45,7 @@ import {
   getDistinctFocusDaysCount,
   getMacroFocusSecondsDistribution,
   getNetFocusSecondsForDate,
+  getWeekdayFocusStreakCount,
   getWeeklyWeekdayFocusSeconds,
   isWeekdayDateKey,
   loadFocusLogs,
@@ -164,6 +165,7 @@ export const StudySchedule: React.FC<StudyScheduleProps> = ({
   );
   const weekGoalPct = Math.min(100, Math.round((weekNetMinutes / WEEKLY_GOAL_MINUTES) * 100));
   const distinctFocusDays = getDistinctFocusDaysCount(focusLogs);
+  const weekdayStreakDays = getWeekdayFocusStreakCount(focusLogs, todayKey);
   const macroSecondsDist = useMemo(() => getMacroFocusSecondsDistribution(focusLogs), [focusLogs]);
 
   const loggedMinutesByDay = useMemo(() => {
@@ -508,19 +510,39 @@ export const StudySchedule: React.FC<StudyScheduleProps> = ({
             />
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-[#F6F8F7] p-3.5 space-y-1.5">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Consistência registrada
+          <div className="rounded-xl border border-slate-200 bg-[#F6F8F7] p-3.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Consistência (Seg–Sex)
+              </span>
+              <span className="text-[10px] font-medium text-slate-500">
+                Sáb/Dom não contam
+              </span>
             </div>
-            <div className="text-sm sm:text-base font-display font-extrabold text-slate-900 font-mono tabular-nums">
-              {distinctFocusDays} {distinctFocusDays === 1 ? 'dia com foco' : 'dias com foco'}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-white border border-slate-200 px-2.5 py-1.5">
+                <div className="text-[10px] font-semibold text-slate-500 uppercase">
+                  Dias estudados
+                </div>
+                <div className="text-sm sm:text-base font-display font-extrabold text-slate-900 font-mono tabular-nums">
+                  {distinctFocusDays} {distinctFocusDays === 1 ? 'dia' : 'dias'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-white border border-slate-200 px-2.5 py-1.5">
+                <div className="text-[10px] font-semibold text-slate-500 uppercase">
+                  Em sequência
+                </div>
+                <div className="text-sm sm:text-base font-display font-extrabold text-[#006837] font-mono tabular-nums">
+                  {weekdayStreakDays} {weekdayStreakDays === 1 ? 'dia' : 'dias'}
+                </div>
+              </div>
             </div>
             <div className="text-[11px] text-slate-600 font-mono tabular-nums">
               {macroDistEntries.length > 0
                 ? macroDistEntries
                     .map(([id, sec]) => `${MACRO_LABELS[id] || id}: ${Math.floor(sec / 60)}m`)
                     .join(' · ')
-                : 'Nenhum minuto líquido gravado ainda'}
+                : 'Sáb/Dom não contam como foco nem quebram a sequência'}
             </div>
           </div>
         </div>

@@ -22,8 +22,8 @@ export const STORAGE_KEY_DRIVE_VALIDATED = 'google_drive_sync_validated_v1';
 export const STORAGE_KEY_DRIVE_LAST_SYNC = 'google_drive_last_sync_date_v1';
 export const STORAGE_KEY_DRIVE_SAFETY_BACKUP = 'transpetro_pre_drive_sync_safety_backup_v1';
 
-export const GOOGLE_DRIVE_DEFAULT_FILE_PREFIX = 'PLATAFORMA TRANSPETRO';
-export const GOOGLE_DRIVE_FILE_NAME = 'PLATAFORMA TRANSPETRO.json';
+export const GOOGLE_DRIVE_DEFAULT_FILE_PREFIX = 'Petrobras_Enfase_Operacao_Jr';
+export const GOOGLE_DRIVE_FILE_NAME = 'Petrobras_Enfase_Operacao_Jr.json';
 export const GOOGLE_DRIVE_ALT_FILE_PREFIX = 'PLATAFORMA TRANSPETRO';
 
 /**
@@ -473,29 +473,29 @@ export function fetchGoogleDriveDataViaJsonp(
 
 /**
  * Retorna o NOVO código do Google Apps Script completo e pronto para copiar e colar,
- * configurado especificamente para buscar o arquivo "PLATAFORMA TRANSPETRO.json".
+ * configurado especificamente para buscar o arquivo "Petrobras_Enfase_Operacao_Jr.json".
  */
 export function getGoogleAppsScriptTemplate(targetFileName: string = GOOGLE_DRIVE_FILE_NAME): string {
   return `// ============================================================================
-// NOVO SCRIPT GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PLATAFORMA TRANSPETRO
+// NOVO SCRIPT GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PETROBRAS ÊNFASE OPERAÇÃO JR
 // Nome exato do arquivo no Google Drive: "${targetFileName}"
 // ============================================================================
 //
-// 📌 PASSO A PASSO PARA ATIVAR EM MENOS DE 2 MINUTOS:
+// PASSO A PASSO PARA ATIVAR EM MENOS DE 2 MINUTOS:
 // 1. Acesse: https://script.google.com e clique no botão "+ Novo projeto"
 // 2. Apague o código que estiver no editor, cole este código completo e salve (Ctrl+S ou ícone de disquete)
 // 3. Clique no botão azul "Implantar" (canto superior direito) > "Nova implantação"
 // 4. Configure:
-//    - Tipo (ícone de engrenagem ⚙️): Selecione "Aplicativo da Web"
-//    - Descrição: "Sincronizador Plataforma Transpetro"
+//    - Tipo (ícone de engrenagem): Selecione "Aplicativo da Web"
+//    - Descrição: "Sincronizador Petrobras Enfase Operacao Jr"
 //    - Executar como: "Eu" (seu e-mail Google)
 //    - QUEM TEM ACESSO: "Qualquer pessoa" (OBRIGATÓRIO: se deixar 'Somente eu', o app será bloqueado pelo Google!)
 // 5. Clique em "Implantar", autorize as permissões da sua conta e COPIE a URL gerada (ela termina em /exec)
-// 6. Cole a URL no aplicativo da Transpetro e clique em "Atualizar dados do Google Drive"!
+// 6. Cole a URL no aplicativo e clique em "Atualizar dados do Google Drive"!
 // ============================================================================
 
 function doGet(e) {
-  var targetName = "PLATAFORMA TRANSPETRO";
+  var targetName = "Petrobras_Enfase_Operacao_Jr";
   var exactFileName = "${targetFileName}";
   var matchingFiles = [];
 
@@ -504,11 +504,11 @@ function doGet(e) {
     var name = file.getName().trim();
     var lower = name.toLowerCase();
 
-    // 1. Verifica se corresponde a PLATAFORMA TRANSPETRO
-    var isExact = (lower === "plataforma transpetro.json" || lower === "plataforma transpetro");
-    var startsWith = (lower.indexOf("plataforma transpetro") === 0);
-    var contains = (lower.indexOf("plataforma") !== -1 && lower.indexOf("transpetro") !== -1) ||
-                   (lower.indexOf("transpetro") !== -1);
+    // 1. Verifica correspondência prioritária com Petrobras_Enfase_Operacao_Jr (e fallback legado)
+    var isExact = (lower === "petrobras_enfase_operacao_jr.json" || lower === "petrobras_enfase_operacao_jr");
+    var startsWith = (lower.indexOf("petrobras_enfase_operacao_jr") === 0);
+    var contains = (lower.indexOf("operacao") !== -1 && lower.indexOf("petrobras") !== -1) ||
+                   (lower === "plataforma transpetro.json" || lower.indexOf("plataforma transpetro") === 0);
 
     if (isExact || startsWith || contains) {
       matchingFiles.push({
@@ -524,9 +524,9 @@ function doGet(e) {
   // 1. Busca rápida indexada no Google Drive (ignora lixeira)
   try {
     var searchQueries = [
-      "title contains 'PLATAFORMA TRANSPETRO' and trashed = false",
-      "title contains 'plataforma transpetro' and trashed = false",
-      "title contains 'transpetro' and trashed = false"
+      "title contains 'Petrobras_Enfase_Operacao_Jr' and trashed = false",
+      "title contains 'petrobras_enfase_operacao_jr' and trashed = false",
+      "title contains 'PLATAFORMA TRANSPETRO' and trashed = false"
     ];
     for (var i = 0; i < searchQueries.length; i++) {
       var it = DriveApp.searchFiles(searchQueries[i]);
@@ -557,8 +557,8 @@ function doGet(e) {
   }
 
   // 3. Ordenação inteligente:
-  // - Prioridade 1: Nome exato ("PLATAFORMA TRANSPETRO.json")
-  // - Prioridade 2: Começa com "PLATAFORMA TRANSPETRO"
+  // - Prioridade 1: Nome exato ("Petrobras_Enfase_Operacao_Jr.json")
+  // - Prioridade 2: Começa com "Petrobras_Enfase_Operacao_Jr"
   // - Prioridade 3: Mais recentemente modificado (getLastUpdated)
   matchingFiles.sort(function(a, b) {
     if (a.isExact && !b.isExact) return -1;

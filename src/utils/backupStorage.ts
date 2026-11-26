@@ -267,7 +267,7 @@ export const copyBackupToClipboard = async (): Promise<boolean> => {
   }
 };
 
-export const BACKUP_FILE_NAME = 'PLATAFORMA TRANSPETRO.json';
+export const BACKUP_FILE_NAME = 'Petrobras_Enfase_Operacao_Jr.json';
 
 export const exportFullBackup = (): void => {
   const payload = generateBackupPayload();

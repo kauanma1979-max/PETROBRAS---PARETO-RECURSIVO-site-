@@ -18,6 +18,7 @@ import {
   Cloud
 } from 'lucide-react';
 import {
+  BACKUP_FILE_NAME,
   exportFullBackup,
   importFullBackup,
   getBackupStats,
@@ -71,7 +72,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
       exportFullBackup();
       setFeedback({
         type: 'success',
-        message: 'Arquivo "PLATAFORMA TRANSPETRO.json" baixado com sucesso! Contém todas as informações do seu estudo.'
+        message: `Arquivo "${BACKUP_FILE_NAME}" baixado com sucesso! Contém todas as informações do seu estudo.`
       });
       setStats(getBackupStats());
     } catch (e: any) {
@@ -318,7 +319,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
                 </div>
                 <h4 className="text-sm font-display font-bold text-slate-900">1. Baixar Arquivo Único (.JSON)</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Gera o download automático de <strong>PLATAFORMA TRANSPETRO.json</strong> com 100% dos seus dados reunidos.
+                  Gera o download automático de <strong>{BACKUP_FILE_NAME}</strong> com 100% dos seus dados reunidos.
                 </p>
               </div>
               <div className="space-y-2 pt-2">

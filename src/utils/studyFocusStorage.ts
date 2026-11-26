@@ -404,9 +404,79 @@ export function getWeeklyWeekdayFocusSeconds(
   );
 }
 
-export function getDistinctFocusDaysCount(logs?: FocusLogSegment[]): number {
+function stepBackOneLocalDay(dateKey: string): string {
+  const dt = parseLocalDateKey(dateKey);
+  dt.setDate(dt.getDate() - 1);
+  return toLocalDateKey(dt);
+}
+
+function stepBackToPreviousWeekday(dateKey: string): string {
+  let cursor = stepBackOneLocalDay(dateKey);
+  while (!isWeekdayDateKey(cursor)) {
+    cursor = stepBackOneLocalDay(cursor);
+  }
+  return cursor;
+}
+
+/**
+ * Conjunto de datas úteis (Segunda a Sexta) em que houve tempo líquido de estudo registrado.
+ * Sábados e domingos nunca contam como dia de foco.
+ */
+export function getWeekdayFocusDayKeys(logs?: FocusLogSegment[]): Set<string> {
   const source = logs ?? loadFocusLogs();
-  return new Set(source.map((s) => s.dateKey)).size;
+  const keys = new Set<string>();
+  for (const seg of source) {
+    if (seg.durationSeconds > 0 && isWeekdayDateKey(seg.dateKey)) {
+      keys.add(seg.dateKey);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Total de dias úteis distintos estudados (Segunda a Sexta). Sábado e domingo não contam.
+ */
+export function getDistinctFocusDaysCount(logs?: FocusLogSegment[]): number {
+  return getWeekdayFocusDayKeys(logs).size;
+}
+
+/**
+ * Sequência atual de dias úteis estudados (Segunda a Sexta):
+ * - Atrelada estritamente a dias úteis com estudo registrado (nunca dias corridos do calendário).
+ * - Sábados e domingos são ignorados (não somam nem quebram a sequência entre sexta e segunda).
+ * - Se hoje for dia útil e o usuário ainda não estudou hoje, preserva a sequência até o dia útil anterior.
+ */
+export function getWeekdayFocusStreakCount(
+  logs?: FocusLogSegment[],
+  referenceDateKey: string = toLocalDateKey()
+): number {
+  const studiedWeekdays = getWeekdayFocusDayKeys(logs);
+  if (studiedWeekdays.size === 0) return 0;
+
+  const isRefWeekday = isWeekdayDateKey(referenceDateKey);
+  const latestWeekday = isRefWeekday
+    ? referenceDateKey
+    : stepBackToPreviousWeekday(referenceDateKey);
+
+  let cursor: string;
+  if (studiedWeekdays.has(latestWeekday)) {
+    cursor = latestWeekday;
+  } else if (isRefWeekday) {
+    const prevWeekday = stepBackToPreviousWeekday(latestWeekday);
+    if (!studiedWeekdays.has(prevWeekday)) {
+      return 0;
+    }
+    cursor = prevWeekday;
+  } else {
+    return 0;
+  }
+
+  let streak = 0;
+  while (studiedWeekdays.has(cursor)) {
+    streak += 1;
+    cursor = stepBackToPreviousWeekday(cursor);
+  }
+  return streak;
 }
 
 export function getMacroFocusSecondsDistribution(

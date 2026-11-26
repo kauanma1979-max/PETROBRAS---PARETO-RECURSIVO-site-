@@ -613,7 +613,7 @@ export const ErrorNotebook: React.FC = () => {
               size="sm"
               leftIcon={<Database className="w-3.5 h-3.5" aria-hidden="true" />}
               onClick={() => exportFullBackup()}
-              title="Baixar backup único completo (PLATAFORMA TRANSPETRO.json)"
+              title="Baixar backup único completo (Petrobras_Enfase_Operacao_Jr.json)"
             >
               Backup Completo (.JSON)
             </Button>
@@ -1289,7 +1289,7 @@ export const ErrorNotebook: React.FC = () => {
                   e.stopPropagation();
                   handleAddError(e, true);
                 }}
-                title="Salva o registro e baixa o arquivo completo PLATAFORMA TRANSPETRO.json"
+                title="Salva o registro e baixa o arquivo completo Petrobras_Enfase_Operacao_Jr.json"
               >
                 Salvar e Baixar Backup
               </Button>
@@ -1448,7 +1448,7 @@ export const ErrorNotebook: React.FC = () => {
                       e.stopPropagation();
                       handleSaveEdit(e, true);
                     }}
-                    title="Salva as alterações e baixa o arquivo completo PLATAFORMA TRANSPETRO.json"
+                    title="Salva as alterações e baixa o arquivo completo Petrobras_Enfase_Operacao_Jr.json"
                   >
                     Salvar e Baixar Backup
                   </Button>
