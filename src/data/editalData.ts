@@ -23,12 +23,12 @@ export interface EditalMetadata {
 export const EDITAL_METADATA: EditalMetadata = {
   statusEdital: 'aguardando',
   tituloPlataforma: 'Transpetro (Ênfase 4: Dutos e Terminais) & Petrobras (Ênfase 8: Operação)',
-  bancaPrincipal: 'Cesgranrio (Transpetro) · Cebraspe (Petrobras)',
+  bancaPrincipal: 'Fundação Cesgranrio',
   basesConsolidadas: [
     {
       id: 'transpetro',
-      titulo: 'Transpetro 2026 — Ênfase 4: Dutos e Terminais',
-      editalReferencia: 'Edital nº 03 — Profissional Transpetro de Nível Médio Júnior (Anexo IV)',
+      titulo: 'Transpetro — Ênfase 4: Dutos e Terminais',
+      editalReferencia: 'Profissional Transpetro de Nível Médio Júnior · Ref. histórica: Transpetro 2023.1 (60 questões: 20 básicas + 40 específicas)',
       enfase: 'Ênfase 4: Dutos e Terminais',
       banca: 'Fundação Cesgranrio',
       totalItensEspecificos: 38,
@@ -37,14 +37,13 @@ export const EDITAL_METADATA: EditalMetadata = {
     },
     {
       id: 'petrobras',
-      titulo: 'Petrobras 2023.2 — Ênfase 8: Operação',
-      editalReferencia: 'Edital nº 1 — Petrobras/PSP RH 2023.2 (Anexo IV — Blocos I, II e III)',
+      titulo: 'Petrobras / Transpetro — Ênfase 8: Operação Júnior',
+      editalReferencia: 'Técnico de Operação Júnior · Ref. histórica Cesgranrio: Transpetro 2018 (60 questões: Química 16, Física 11, Mecânica 11 + demais)',
       enfase: 'Ênfase 8: Operação',
-      banca: 'Cebraspe',
+      banca: 'Fundação Cesgranrio',
       totalItensEspecificos: 32,
-      urlReferencia:
-        'https://cdn.cebraspe.org.br/concursos/petrobras_23_ntj/arquivos/ED_1_PETROBRAS_PSP_23_2_ABERTURA_ATUALIZADO_RET_3_DOU.PDF',
-      observacao: '32 objetos de avaliação distribuídos em Bloco I (17), Bloco II (9) e Bloco III (6).',
+      urlReferencia: 'https://concursos.cesgranrio.org.br/portal/avaliacoes/22',
+      observacao: '32 objetos de avaliação distribuídos em Bloco I (17), Bloco II (9) e Bloco III (6), preparados no padrão Cesgranrio.',
     },
   ],
   resumoMesclagem: {

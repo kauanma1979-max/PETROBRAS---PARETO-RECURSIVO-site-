@@ -45,6 +45,7 @@ import {
   type ResolvedStudyResume,
   type TimerLaunchTarget,
 } from './utils/studyResume';
+import type { CesgranrioAiLaunchRequest } from './data/cesgranrioDna';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -101,6 +102,13 @@ export default function App() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [backupModalTab, setBackupModalTab] = useState<'drive' | 'file' | 'code'>('drive');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+  const [cesgranrioLaunchRequest, setCesgranrioLaunchRequest] =
+    useState<CesgranrioAiLaunchRequest | null>(null);
+
+  const handleLaunchCesgranrioAi = (req: CesgranrioAiLaunchRequest) => {
+    setCesgranrioLaunchRequest(req);
+    handleTabChange('banca');
+  };
 
   const handleSelectCalendarDate = (dateKey: string) => {
     setSelectedCalendarDate(dateKey);
@@ -290,7 +298,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-verticalizado"
             className={activeTab === 'verticalizado' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <EditalVerticalizado />
+            <EditalVerticalizado onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
           </div>
 
           <div
@@ -298,7 +306,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-pareto"
             className={activeTab === 'pareto' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <ParetoMatrix />
+            <ParetoMatrix onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
           </div>
 
           <div
@@ -306,7 +314,10 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-material"
             className={activeTab === 'material' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <TabMaterialEstudo onOpenCalculator={handleOpenCalculator} />
+            <TabMaterialEstudo
+              onOpenCalculator={handleOpenCalculator}
+              onLaunchCesgranrioAi={handleLaunchCesgranrioAi}
+            />
           </div>
 
           <div
@@ -334,7 +345,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-banca"
             className={activeTab === 'banca' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <BancaCesgranrio />
+            <BancaCesgranrio launchRequest={cesgranrioLaunchRequest} />
           </div>
 
           <div
@@ -342,7 +353,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-caderno"
             className={activeTab === 'caderno' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <ErrorNotebook />
+            <ErrorNotebook onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
           </div>
         </main>
 

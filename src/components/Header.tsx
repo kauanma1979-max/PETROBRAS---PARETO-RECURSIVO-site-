@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <span aria-hidden="true" className="text-emerald-700 hidden sm:inline">·</span>
             <span className="hidden sm:inline text-orange-300 font-medium">
-              Cesgranrio &amp; Cebraspe
+              Banca: Fundação Cesgranrio
             </span>
           </div>
         </div>

@@ -12,18 +12,14 @@ export interface ConfusedPair {
 }
 
 export const BANCA_PROFILE = {
-  title: 'Perfil das Bancas: Cesgranrio (Transpetro) & Cebraspe (Petrobras)',
+  title: 'DNA da Banca: Fundação CESGRANRIO',
   subtitle:
-    'Como as duas bancas históricas do Sistema Petrobras cobram os mesmos tópicos técnicos de Dutos e Terminais e Operação.',
+    'Como a Fundação CESGRANRIO cobra os conteúdos técnicos de Operação Júnior e Dutos e Terminais no Sistema Petrobras — estrutura das provas, distratores reais e pares conceituais.',
   cesgranrioRules: [
-    'Múltipla escolha (5 alternativas A–E) com enunciados contextualizados em rotinas industriais de terminais, dutos, tanques e refinarias.',
-    'Cobra cálculos diretos de conversão de unidades (4–20 mA, Stevin, PV=nRT, estequiometria e escalas térmicas) com distratores baseados em erros clássicos de unidade (°C em vez de K).',
-    'Exige domínio preciso da terminologia técnica da NR-13, NR-20, NR-33 e da simbologia ISA-5.1.',
-  ],
-  cebraspeRules: [
-    'Itens de julgamento (Certo / Errado) em que uma única palavra absoluta ou inversão causal ("sempre", "exclusivamente", "aumenta" no lugar de "diminui") torna o item errado.',
-    'Forte foco conceitual em Mecânica dos Fluidos (Bernoulli, perda de carga, hidrostática), Termodinâmica e Equipamentos de Processo.',
-    'Divide os conhecimentos específicos em 3 blocos integrados (Ciências Básicas, Física/Termo e Processos/Equipamentos/SMS) exigindo domínio equilibrado.',
+    'Múltipla escolha com 5 alternativas (A–E) e apenas uma correta, exigindo compreensão conceitual com aplicação prática em refinarias, terminais aquaviários, dutos e parques de tanques.',
+    'Provas de 60 questões sem uso de calculadora: cálculos numéricos limpos com forte exploração de unidades de medida (4–20 mA, Stevin, Bernoulli, PV=nRT em Kelvin, estequiometria) e simplificações diretas.',
+    'Distratores tecnicamente plausíveis construídos sobre erros reais de raciocínio: inversão de relações físicas, troca de unidades, erro de sinal, confusão entre equipamentos e desconsideração de condições operacionais.',
+    'Cobrança precisa de normas técnicas e de segurança (NR-13, NR-20, NR-33, API/ASME, simbologia ISA-5.1), além de leitura e interpretação de gráficos, curvas de bombas, tabelas e esquemas de processo.',
   ],
 };
 
