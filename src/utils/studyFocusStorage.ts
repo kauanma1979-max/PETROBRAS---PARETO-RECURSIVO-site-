@@ -10,13 +10,13 @@ export const FOCUS_STORAGE_KEYS = {
   SELECTED_DATE: 'transpetro_calendar_selected_date_v1',
 } as const;
 
-export const DAILY_GOAL_MINUTES = 120;
-export const DAILY_GOAL_SECONDS = DAILY_GOAL_MINUTES * 60; // 7200s
+export const DAILY_GOAL_MINUTES = 100; // 2 aulas de 50 min (50m aula + 20m descanso + 50m aula)
+export const DAILY_GOAL_SECONDS = DAILY_GOAL_MINUTES * 60; // 6000s
 export const FOCUS_BLOCK_MINUTES = 50;
 export const FOCUS_BLOCK_SECONDS = FOCUS_BLOCK_MINUTES * 60; // 3000s
 export const REST_BLOCK_MINUTES = 20;
 export const REST_BLOCK_SECONDS = REST_BLOCK_MINUTES * 60; // 1200s
-export const WEEKLY_GOAL_MINUTES = 600; // 5 dias úteis x 120 min
+export const WEEKLY_GOAL_MINUTES = 500; // 5 dias úteis x 100 min (10 aulas de 50 min)
 
 export interface FocusLogSegment {
   id: string;
@@ -26,7 +26,6 @@ export interface FocusLogSegment {
   durationSeconds: number;
   topicId?: string;
   scheduleBlockId?: string;
-  legacySessionId?: string;
   macroAreaId?: string;
   topicTitle?: string;
   type: 'focus';
@@ -37,7 +36,6 @@ export interface PomodoroActiveState {
   sessionId: string;
   dateKey: string;
   scheduleBlockId?: string;
-  legacySessionId?: string;
   topicId?: string;
   macroAreaId?: string;
   topicTitle: string;
@@ -62,7 +60,6 @@ export interface StudyResumeState {
   updatedAt: number;
   dateKey: string;
   scheduleBlockId?: string;
-  legacySessionId?: string;
   topicId?: string;
   macroAreaId?: string;
   topicTitle?: string;
@@ -145,7 +142,6 @@ export function deduplicateFocusLogs(logs: unknown[]): FocusLogSegment[] {
       durationSeconds: Math.round(item.durationSeconds),
       topicId: item.topicId,
       scheduleBlockId: item.scheduleBlockId,
-      legacySessionId: item.legacySessionId,
       macroAreaId: item.macroAreaId,
       topicTitle: item.topicTitle,
       type: 'focus',
@@ -189,7 +185,6 @@ export function splitFocusIntervalByLocalDate(params: {
   endedAtMs: number;
   topicId?: string;
   scheduleBlockId?: string;
-  legacySessionId?: string;
   macroAreaId?: string;
   topicTitle?: string;
   status: 'completed' | 'interrupted';
@@ -200,7 +195,6 @@ export function splitFocusIntervalByLocalDate(params: {
     endedAtMs,
     topicId,
     scheduleBlockId,
-    legacySessionId,
     macroAreaId,
     topicTitle,
     status,
@@ -244,7 +238,6 @@ export function splitFocusIntervalByLocalDate(params: {
         durationSeconds: clampedSeconds,
         topicId,
         scheduleBlockId,
-        legacySessionId,
         macroAreaId,
         topicTitle,
         type: 'focus',
@@ -279,7 +272,6 @@ export function loadActivePomodoroState(): PomodoroActiveState | null {
       sessionId: parsed.sessionId,
       dateKey: typeof parsed.dateKey === 'string' ? parsed.dateKey : toLocalDateKey(),
       scheduleBlockId: parsed.scheduleBlockId,
-      legacySessionId: parsed.legacySessionId,
       topicId: parsed.topicId,
       macroAreaId: parsed.macroAreaId,
       topicTitle: parsed.topicTitle || 'Sessão de Estudo',
@@ -354,7 +346,6 @@ export function loadStudyResumeState(): StudyResumeState | null {
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       dateKey: parsed.dateKey,
       scheduleBlockId: parsed.scheduleBlockId,
-      legacySessionId: parsed.legacySessionId,
       topicId: parsed.topicId,
       macroAreaId: parsed.macroAreaId,
       topicTitle: parsed.topicTitle,
@@ -390,7 +381,7 @@ export function getNetFocusMinutesForDate(dateKey: string, logs?: FocusLogSegmen
 }
 
 /**
- * Total semanal considerando estritamente segunda a sexta-feira (meta semanal de 600 min).
+ * Total semanal considerando estritamente segunda a sexta-feira (meta semanal de 500 min = 10 × 50 min).
  */
 export function getWeeklyWeekdayFocusSeconds(
   referenceDateKey: string,
@@ -493,7 +484,7 @@ export function getMacroFocusSecondsDistribution(
 }
 
 /**
- * Calcula a duração do próximo bloco de foco: min(50 min, saldo restante para 120 min).
+ * Calcula a duração do próximo bloco de foco: min(50 min, saldo restante para 100 min).
  */
 export function computeNextFocusDurationSeconds(alreadyLoggedSecondsOnDate: number): number {
   const remainingGoal = Math.max(0, DAILY_GOAL_SECONDS - alreadyLoggedSecondsOnDate);

@@ -212,14 +212,14 @@ export const StudyCalendarView: React.FC<StudyCalendarViewProps> = ({
               Calendário de Estudos
             </h3>
             <p className="text-xs text-slate-500 font-mono tabular-nums">
-              Plano Jan–Out/2027 · 2h/dia útil · Sáb e Dom descanso
+              Plano Jan–Out/2027 · 50m + 20m + 50m/dia útil · Sáb e Dom descanso
             </p>
           </div>
           {isPhase1Month && (
-            <StatusBadge tone="success">Nivelamento — Química e Física</StatusBadge>
+            <StatusBadge tone="success">Nivelamento — 1 matéria/dia (Química ↔ Física)</StatusBadge>
           )}
           {isPhase2Month && (
-            <StatusBadge tone="orange">Pareto completo — todas as macroáreas</StatusBadge>
+            <StatusBadge tone="orange">Pareto completo — aulas de 50 min</StatusBadge>
           )}
           {!isPhase1Month && !isPhase2Month && (
             <StatusBadge tone="neutral">Fora do intervalo Jan–Out/2027</StatusBadge>
@@ -419,7 +419,7 @@ export const StudyCalendarView: React.FC<StudyCalendarViewProps> = ({
 
                     {plan.inSchedulePeriod && !plan.isRestDay && (
                       <span className="text-[10px] font-mono tabular-nums text-slate-400 hidden sm:inline">
-                        {loggedMin > 0 ? `${loggedMin}m` : '2h'}
+                        {loggedMin > 0 ? `${loggedMin}m` : '2×50m'}
                       </span>
                     )}
                   </div>

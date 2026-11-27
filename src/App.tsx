@@ -15,11 +15,6 @@ import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { NavigationTabs } from './components/NavigationTabs';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { StudyResumePrompt } from './components/StudyResumePrompt';
-import {
-  TOTAL_CICLOS_ESTUDO,
-  TOTAL_SESSOES_ESTUDO,
-  TOTAL_QUESTOES_PLANEJADAS,
-} from './data/scheduleData';
 import { SYLLABUS_COUNTS } from './data/verticalSyllabusData';
 import {
   getDriveEndpoint,
@@ -34,13 +29,18 @@ import {
 import { generateBackupPayload, restoreFromRawData } from './utils/backupStorage';
 import {
   FOCUS_STORAGE_KEYS,
+  formatMinutesAsHoursMinutes,
+  getDistinctFocusDaysCount,
+  getWeekdayFocusStreakCount,
   loadActivePomodoroState,
+  loadFocusLogs,
   normalizeRestoredPomodoroOnAppOpen,
   saveActivePomodoroState,
+  saveFocusLogs,
+  saveStudyResumeState,
 } from './utils/studyFocusStorage';
 import { getInitialCalendarDateKey } from './utils/studyCalendar2027';
 import {
-  buildTimerLaunchTargetFromLegacySession,
   resolveStudyResumeContext,
   type ResolvedStudyResume,
   type TimerLaunchTarget,
@@ -72,33 +72,6 @@ export default function App() {
       });
     });
   };
-
-  const parseCompletedSessions = (raw: string | null): string[] => {
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(item => typeof item === 'string' && item.trim().length > 0);
-      }
-      if (parsed && typeof parsed === 'object') {
-        return Object.keys(parsed).filter(k => Boolean(parsed[k]));
-      }
-    } catch {
-      // ignore
-    }
-    return [];
-  };
-
-  const [completedSessions, setCompletedSessions] = useState<string[]>(() => {
-    try {
-      const saved =
-        localStorage.getItem('transpetro_completed_days_v2') ||
-        localStorage.getItem('transpetro_completed_days');
-      return parseCompletedSessions(saved);
-    } catch {
-      return [];
-    }
-  });
 
   const [activeTimerTarget, setActiveTimerTarget] = useState<TimerLaunchTarget | null>(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(() => {
@@ -164,20 +137,8 @@ export default function App() {
     setIsBackupModalOpen(true);
   };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('transpetro_completed_days_v2', JSON.stringify(completedSessions));
-    } catch (e) {
-      console.error('Error writing completed sessions to storage:', e);
-    }
-  }, [completedSessions]);
-
   const handleDataRestored = () => {
     try {
-      const raw =
-        localStorage.getItem('transpetro_completed_days_v2') ||
-        localStorage.getItem('transpetro_completed_days');
-      setCompletedSessions(parseCompletedSessions(raw));
       const savedDate = localStorage.getItem(FOCUS_STORAGE_KEYS.SELECTED_DATE);
       if (savedDate && /^\d{4}-\d{2}-\d{2}$/.test(savedDate)) {
         setSelectedCalendarDate(savedDate);
@@ -246,45 +207,20 @@ export default function App() {
     }
   }, []);
 
-  const handleToggleSession = (sessionId: string) => {
-    setCompletedSessions(prev => {
-      const arr = Array.isArray(prev) ? prev : [];
-      const isCompleted = arr.includes(sessionId);
-      const next = isCompleted ? arr.filter(id => id !== sessionId) : [...arr, sessionId];
-      try {
-        localStorage.setItem('transpetro_completed_days_v2', JSON.stringify(next));
-      } catch (e) {
-        console.error('Error saving completed sessions', e);
-      }
-      return next;
-    });
-  };
-
-  const handleCompleteSession = (sessionId: string) => {
-    setCompletedSessions(prev => {
-      const arr = Array.isArray(prev) ? prev : [];
-      if (!arr.includes(sessionId)) {
-        const next = [...arr, sessionId];
-        try {
-          localStorage.setItem('transpetro_completed_days_v2', JSON.stringify(next));
-        } catch (e) {
-          console.error(e);
-        }
-        return next;
-      }
-      return arr;
-    });
-  };
-
   const confirmResetProgress = () => {
-    try {
-      localStorage.setItem('transpetro_completed_days_v2', JSON.stringify([]));
-    } catch {}
-    setCompletedSessions([]);
+    saveFocusLogs([]);
+    saveActivePomodoroState(null);
+    saveStudyResumeState(null);
+    setResumeContext(null);
   };
 
   const handleExportReport = () => {
-    const progressPct = Math.round((completedSessions.length / Math.max(1, TOTAL_SESSOES_ESTUDO)) * 100);
+    const logs = loadFocusLogs();
+    const totalMinutes = Math.floor(
+      logs.reduce((acc, seg) => acc + seg.durationSeconds, 0) / 60
+    );
+    const distinctWeekdays = getDistinctFocusDaysCount(logs);
+    const weekdayStreak = getWeekdayFocusStreakCount(logs);
 
     const report = `# RELATÓRIO DE ESTUDOS — TRANSPETRO & PETROBRAS (CONTEÚDO MESCLADO)
 Bases Programáticas:
@@ -296,9 +232,11 @@ Bases Programáticas:
 - Exclusivos Transpetro: ${SYLLABUS_COUNTS.transpetro} tópicos
 - Exclusivos Petrobras: ${SYLLABUS_COUNTS.petrobras} tópicos
 
-## Progresso nos Ciclos de Estudo:
-- Sessões Concluídas: ${completedSessions.length} de ${TOTAL_SESSOES_ESTUDO} (${progressPct}%)
-- Ciclos Temáticos: ${TOTAL_CICLOS_ESTUDO} ciclos (${TOTAL_QUESTOES_PLANEJADAS} questões-alvo planejadas)
+## Plano 2027 & Progresso de Foco (50m + 20m + 50m):
+- Jan–Mar/2027 (Nivelamento): 1 matéria/dia útil (alternando Química ↔ Física, 2 × 50 min/dia)
+- Abr–Out/2027 (Pareto Recursivo): 10 blocos de 50 min/semana (500 min/semana)
+- Total acumulado registrado: ${formatMinutesAsHoursMinutes(totalMinutes)} (${logs.length} registros)
+- Dias úteis estudados (Seg–Sex): ${distinctWeekdays} · Sequência atual: ${weekdayStreak}
 
 ## 4 Macro Áreas Técnicas:
 1. Instrumentação, Metrologia & Controle de Processos (10 tópicos)
@@ -323,8 +261,6 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-[#F6F8F7] flex flex-col selection:bg-[#008542] selection:text-white font-sans antialiased">
         <Header
-          completedSessions={completedSessions.length}
-          totalSessions={TOTAL_SESSOES_ESTUDO}
           onResetProgress={() => setIsResetConfirmOpen(true)}
           onExportReport={handleExportReport}
           onOpenBackupModal={() => handleOpenBackupModal('file')}
@@ -379,11 +315,6 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             className={activeTab === 'cronograma' ? 'block animate-tabEnter' : 'hidden'}
           >
             <StudySchedule
-              completedSessions={completedSessions}
-              onToggleSession={handleToggleSession}
-              onOpenSessionTimer={(session) =>
-                setActiveTimerTarget(buildTimerLaunchTargetFromLegacySession(session))
-              }
               onLaunchTimer={setActiveTimerTarget}
               selectedCalendarDate={selectedCalendarDate}
               onSelectCalendarDate={handleSelectCalendarDate}
@@ -418,10 +349,10 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
         {/* Confirm Reset Progress Dialog */}
         <ConfirmDialog
           isOpen={isResetConfirmOpen}
-          title="Reiniciar progresso dos ciclos de estudo?"
-          message="Deseja realmente zerar o seu progresso de sessões concluídas? Esta ação não afetará o Caderno de Erros nem o Edital Verticalizado."
-          confirmLabel="Zerar Progresso"
-          cancelLabel="Manter Progresso"
+          title="Reiniciar registros de foco e cronômetro?"
+          message="Deseja realmente zerar o histórico de tempo líquido de foco e o cronômetro ativo? Esta ação não afetará o Caderno de Erros, anotações nem o Edital Verticalizado."
+          confirmLabel="Zerar Registros"
+          cancelLabel="Manter Dados"
           variant="danger"
           onConfirm={confirmResetProgress}
           onCancel={() => setIsResetConfirmOpen(false)}
@@ -449,7 +380,6 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
         <DailySessionModal
           target={activeTimerTarget}
           onClose={() => setActiveTimerTarget(null)}
-          onCompleteSession={handleCompleteSession}
         />
 
         {/* Startup Study Resume Prompt */}
@@ -471,7 +401,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
               <span className="text-slate-200">Ênfase 4: Dutos e Terminais + Ênfase 8: Operação</span>
             </div>
             <div className="text-slate-300 font-mono tabular-nums text-[11px]">
-              {SYLLABUS_COUNTS.total} Tópicos Unificados · {TOTAL_CICLOS_ESTUDO} Ciclos · {TOTAL_SESSOES_ESTUDO} Sessões
+              {SYLLABUS_COUNTS.total} Tópicos Unificados · Plano Jan–Out/2027 (50m + 20m + 50m)
             </div>
           </div>
         </footer>

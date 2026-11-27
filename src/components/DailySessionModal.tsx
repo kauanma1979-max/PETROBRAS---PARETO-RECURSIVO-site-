@@ -36,7 +36,6 @@ import { recordStudyResumePointer, type TimerLaunchTarget } from '../utils/study
 interface DailySessionModalProps {
   target: TimerLaunchTarget | null;
   onClose: () => void;
-  onCompleteSession: (sessionId: string) => void;
 }
 
 function computeElapsedInPhase(state: PomodoroActiveState, nowMs: number): number {
@@ -69,7 +68,6 @@ function flushFocusSlice(
       endedAtMs: safeEndedAt,
       topicId: state.topicId,
       scheduleBlockId: state.scheduleBlockId,
-      legacySessionId: state.legacySessionId,
       macroAreaId: state.macroAreaId,
       topicTitle: state.topicTitle,
       status,
@@ -86,13 +84,13 @@ function createInitialStateForTarget(target: TimerLaunchTarget): PomodoroActiveS
   const nextFocusSec = computeNextFocusDurationSeconds(loggedToday);
   const finishedDailyGoal = nextFocusSec === 0;
 
-  // Se houver um estado salvo compatível para o mesmo bloco/sessão, restaura pausado
+  // Se houver um estado salvo compatível para o mesmo bloco, restaura pausado
   const existing = normalizeRestoredPomodoroOnAppOpen(loadActivePomodoroState());
   if (
     existing &&
     !finishedDailyGoal &&
-    ((target.scheduleBlockId && existing.scheduleBlockId === target.scheduleBlockId) ||
-      (target.legacySessionId && existing.legacySessionId === target.legacySessionId))
+    target.scheduleBlockId &&
+    existing.scheduleBlockId === target.scheduleBlockId
   ) {
     return existing;
   }
@@ -101,7 +99,6 @@ function createInitialStateForTarget(target: TimerLaunchTarget): PomodoroActiveS
     sessionId: `pom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     dateKey: target.dateKey || realTodayKey,
     scheduleBlockId: target.scheduleBlockId,
-    legacySessionId: target.legacySessionId,
     topicId: target.topicId,
     macroAreaId: target.macroAreaId,
     topicTitle: target.topicTitle,
@@ -126,10 +123,8 @@ function createInitialStateForTarget(target: TimerLaunchTarget): PomodoroActiveS
 export const DailySessionModal: React.FC<DailySessionModalProps> = ({
   target,
   onClose,
-  onCompleteSession,
 }) => {
   const [timerState, setTimerState] = useState<PomodoroActiveState | null>(null);
-  const [legacyBlockTab, setLegacyBlockTab] = useState<'blocoA' | 'blocoB'>('blocoA');
   const [confirmAdvanceOpen, setConfirmAdvanceOpen] = useState<boolean>(false);
   const [audioBlockedNotice, setAudioBlockedNotice] = useState<boolean>(false);
   const [todayLoggedSeconds, setTodayLoggedSeconds] = useState<number>(() =>
@@ -152,7 +147,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
       return;
     }
 
-    setLegacyBlockTab('blocoA');
     setConfirmAdvanceOpen(false);
     setAudioBlockedNotice(false);
     refreshTodayLogged();
@@ -174,7 +168,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
         {
           dateKey: init.dateKey,
           scheduleBlockId: init.scheduleBlockId,
-          legacySessionId: init.legacySessionId,
           topicId: init.topicId,
           macroAreaId: init.macroAreaId,
           topicTitle: init.topicTitle,
@@ -240,7 +233,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
         void triggerAlarmOnce(cur.soundEnabled);
 
         if (nextFocusSec === 0) {
-          // Atingiu 120 minutos líquidos acumulados no dia -> META DIÁRIA CONCLUÍDA
+          // Atingiu 100 minutos líquidos acumulados no dia (2 × 50 min) -> META DIÁRIA CONCLUÍDA
           const finishedState: PomodoroActiveState = {
             ...cur,
             secondsRemaining: 0,
@@ -253,7 +246,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             completedPhaseEvents: nextEvents,
             finishedDailyGoal: true,
             pendingExpiryNotice: fromBackgroundResume
-              ? 'Fase finalizada em segundo plano. Meta diária de 120 min atingida.'
+              ? 'Fase finalizada em segundo plano. Meta diária de 100 min atingida.'
               : null,
           };
           setTimerState(finishedState);
@@ -262,7 +255,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             {
               dateKey: cur.dateKey,
               scheduleBlockId: cur.scheduleBlockId,
-              legacySessionId: cur.legacySessionId,
               topicId: cur.topicId,
               macroAreaId: cur.macroAreaId,
               topicTitle: cur.topicTitle,
@@ -270,9 +262,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             },
             'completed'
           );
-          if (cur.legacySessionId) {
-            onCompleteSession(cur.legacySessionId);
-          }
           return;
         }
 
@@ -319,9 +308,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
         };
         setTimerState(finishedState);
         saveActivePomodoroState(null);
-        if (cur.legacySessionId) {
-          onCompleteSession(cur.legacySessionId);
-        }
         return;
       }
 
@@ -343,7 +329,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
       setTimerState(nextFocusState);
       saveActivePomodoroState(nextFocusState);
     },
-    [onCompleteSession, refreshTodayLogged, triggerAlarmOnce]
+    [refreshTodayLogged, triggerAlarmOnce]
   );
 
   // Ticker de exibição (500ms) + checkpoint periódico (<= 4s)
@@ -440,7 +426,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
       {
         dateKey: next.dateKey,
         scheduleBlockId: next.scheduleBlockId,
-        legacySessionId: next.legacySessionId,
         topicId: next.topicId,
         macroAreaId: next.macroAreaId,
         topicTitle: next.topicTitle,
@@ -478,7 +463,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
       {
         dateKey: next.dateKey,
         scheduleBlockId: next.scheduleBlockId,
-        legacySessionId: next.legacySessionId,
         topicId: next.topicId,
         macroAreaId: next.macroAreaId,
         topicTitle: next.topicTitle,
@@ -507,7 +491,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
       {
         dateKey: timerState.dateKey,
         scheduleBlockId: timerState.scheduleBlockId,
-        legacySessionId: timerState.legacySessionId,
         topicId: timerState.topicId,
         macroAreaId: timerState.macroAreaId,
         topicTitle: timerState.topicTitle,
@@ -547,7 +530,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           {
             dateKey: timerState.dateKey,
             scheduleBlockId: timerState.scheduleBlockId,
-            legacySessionId: timerState.legacySessionId,
             topicId: timerState.topicId,
             macroAreaId: timerState.macroAreaId,
             topicTitle: timerState.topicTitle,
@@ -555,9 +537,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           },
           'completed'
         );
-        if (timerState.legacySessionId) {
-          onCompleteSession(timerState.legacySessionId);
-        }
         return;
       }
 
@@ -637,21 +616,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
     setAudioBlockedNotice(res.blocked);
   };
 
-  const handleSwitchLegacyTab = (tab: 'blocoA' | 'blocoB') => {
-    if (!target?.legacySession || !timerState || timerState.isRunning) return;
-    setLegacyBlockTab(tab);
-    const blk = tab === 'blocoA' ? target.legacySession.blockA : target.legacySession.blockB;
-    const updated: PomodoroActiveState = {
-      ...timerState,
-      topicTitle: blk.topic,
-      subjectTitle: `${target.legacySession.id} · ${blk.subject}`,
-    };
-    setTimerState(updated);
-    if (!updated.finishedDailyGoal) {
-      saveActivePomodoroState(updated);
-    }
-  };
-
   // Quando usuário fecha pelo X ou backdrop enquanto pausado, salva checkpoint sem apagar retomada
   const handleClosePreserveCheckpoint = () => {
     if (timerState && !timerState.finishedDailyGoal) {
@@ -678,7 +642,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
         {
           dateKey: pausedToSave.dateKey,
           scheduleBlockId: pausedToSave.scheduleBlockId,
-          legacySessionId: pausedToSave.legacySessionId,
           topicId: pausedToSave.topicId,
           macroAreaId: pausedToSave.macroAreaId,
           topicTitle: pausedToSave.topicTitle,
@@ -755,7 +718,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 </span>
 
                 <span className="text-xs font-mono font-semibold text-white/90 tabular-nums">
-                  Ciclo 50/20 · Etapa {timerState.phaseIndex}
+                  Ciclo 50 + 20 + 50 · Etapa {timerState.phaseIndex}
                 </span>
 
                 {target.origem && <OriginBadge origem={target.origem} compact />}
@@ -811,34 +774,6 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
           </div>
 
-          {/* Legacy Session Bloco 1 / Bloco 2 Switcher (if launched from legacy Cycles) */}
-          {target.legacySession && !isFinished && (
-            <div className="grid grid-cols-2 gap-2">
-              {(['blocoA', 'blocoB'] as const).map((tabKey, idx) => {
-                const blk =
-                  tabKey === 'blocoA' ? target.legacySession!.blockA : target.legacySession!.blockB;
-                const active = legacyBlockTab === tabKey;
-                return (
-                  <button
-                    key={tabKey}
-                    type="button"
-                    disabled={timerState.isRunning}
-                    onClick={() => handleSwitchLegacyTab(tabKey)}
-                    className={`p-2.5 rounded-lg border text-left transition-colors duration-150 ${
-                      active
-                        ? 'bg-white text-slate-900 border-white font-bold'
-                        : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-                    } ${timerState.isRunning ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    <div className="text-[10px] font-mono uppercase">
-                      Bloco {idx + 1} · {blk.questionsTarget}q
-                    </div>
-                    <div className="text-xs truncate mt-0.5">{blk.subject}</div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
           {/* Notices (Audio blocked or Background Phase Expiry) */}
           {(audioBlockedNotice || timerState.pendingExpiryNotice) && (
@@ -900,7 +835,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 META DIÁRIA CONCLUÍDA
               </h4>
               <p className="text-xs sm:text-sm text-slate-200 max-w-md mx-auto leading-relaxed">
-                Você completou os 120 minutos líquidos de foco previstos para hoje ({formatMinutesAsHoursMinutes(liveTodayMinutes)} de {DAILY_GOAL_MINUTES} min). Descanse para consolidar o conteúdo.
+                Você completou os 100 minutos líquidos de aula previstos para hoje (2 blocos de 50 min: {formatMinutesAsHoursMinutes(liveTodayMinutes)} de {DAILY_GOAL_MINUTES} min). Descanse para consolidar o conteúdo.
               </p>
             </div>
           )}
@@ -908,9 +843,9 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
           {/* Daily Goal Net Focus Tracker */}
           <div className={`rounded-xl border px-4 py-3 space-y-2 ${innerSurfaceClasses}`}>
             <div className="flex items-center justify-between text-xs font-mono tabular-nums text-white">
-              <span>Progresso líquido de hoje (meta diária 2h00):</span>
+              <span>Progresso líquido de hoje (2 × 50 min = 1h40min):</span>
               <span className="font-bold">
-                {formatMinutesAsHoursMinutes(liveTodayMinutes)} / 2h00 ({dailyPct}%)
+                {formatMinutesAsHoursMinutes(liveTodayMinutes)} / 1h40min ({dailyPct}%)
               </span>
             </div>
             <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">

@@ -17,8 +17,10 @@ import {
 import { DAILY_GOAL_MINUTES, parseLocalDateKey, toLocalDateKey } from './studyFocusStorage';
 
 export const STUDY_DAYS_PER_WEEK = 5;
-export const DAILY_TARGET_MINUTES = DAILY_GOAL_MINUTES; // 120 min
-export const WEEKLY_TARGET_MINUTES = STUDY_DAYS_PER_WEEK * DAILY_TARGET_MINUTES; // 600 min
+export const BLOCK_DURATION_MINUTES = 50;
+export const BLOCKS_PER_DAY = 2;
+export const DAILY_TARGET_MINUTES = DAILY_GOAL_MINUTES; // 100 min (2 aulas de 50 min)
+export const WEEKLY_TARGET_MINUTES = STUDY_DAYS_PER_WEEK * DAILY_TARGET_MINUTES; // 500 min (10 aulas de 50 min)
 
 export const CALENDAR_START_DATE = '2027-01-01';
 export const CALENDAR_END_DATE = '2027-10-31';
@@ -142,26 +144,26 @@ const TOPIC_MICRO_META = new Map<string, MicroContextMeta>(
 );
 
 /**
- * Calcula dinamicamente as quotas semanais da Fase 2 (600 min/semana) a partir dos
- * questionCounts reais de PARETO_MATRIX em múltiplos de 5 min.
+ * Calcula dinamicamente as quotas semanais da Fase 2 (500 min/semana = 10 aulas de 50 min)
+ * a partir dos questionCounts reais de PARETO_MATRIX, garantindo >= 50 min em TODA aula.
  */
 export function computePhase2WeeklyQuotas(): Record<MacroAreaId, number> {
   const macros = PARETO_MATRIX;
   const totalQuestions = macros.reduce((acc, m) => acc + m.questionCount, 0);
-  const unitMinutes = 5;
-  const totalUnits = WEEKLY_TARGET_MINUTES / unitMinutes; // 120 unidades de 5 min
+  const unitMinutes = BLOCK_DURATION_MINUTES; // 50 min por aula
+  const totalSlots = WEEKLY_TARGET_MINUTES / unitMinutes; // 10 aulas/semana
 
-  const exactUnits = macros.map((m) => ({
+  const exactSlots = macros.map((m) => ({
     id: m.id as MacroAreaId,
-    raw: (m.questionCount / Math.max(1, totalQuestions)) * totalUnits,
-    floor: Math.floor((m.questionCount / Math.max(1, totalQuestions)) * totalUnits),
+    raw: (m.questionCount / Math.max(1, totalQuestions)) * totalSlots,
+    floor: Math.floor((m.questionCount / Math.max(1, totalQuestions)) * totalSlots),
     rank: getMacroParetoRank(m.id),
   }));
 
-  const assigned = exactUnits.reduce((acc, item) => acc + item.floor, 0);
-  let remainder = totalUnits - assigned;
+  const assigned = exactSlots.reduce((acc, item) => acc + item.floor, 0);
+  const remainder = totalSlots - assigned;
 
-  const byFraction = [...exactUnits].sort((a, b) => {
+  const byFraction = [...exactSlots].sort((a, b) => {
     const fracA = a.raw - a.floor;
     const fracB = b.raw - b.floor;
     if (Math.abs(fracB - fracA) > 1e-9) return fracB - fracA;
@@ -175,7 +177,7 @@ export function computePhase2WeeklyQuotas(): Record<MacroAreaId, number> {
     eletricidade: 0,
   };
 
-  for (const item of exactUnits) {
+  for (const item of exactSlots) {
     result[item.id] = item.floor * unitMinutes;
   }
   for (let i = 0; i < remainder; i++) {
@@ -187,28 +189,13 @@ export function computePhase2WeeklyQuotas(): Record<MacroAreaId, number> {
 }
 
 /**
- * Calcula dinamicamente as quotas semanais da Fase 1 (Química vs Física, total 600 min/semana)
- * a partir da soma real de mappedQuestions dos tópicos elegíveis.
+ * Fase 1 (Jan–Mar/2027): 1 matéria por dia útil, alternando dia de Química e dia de Física.
+ * Em média semanal (pares de semanas): 5 aulas de 50 min cada (250 min/sem cada).
  */
 export function computePhase1WeeklyQuotas(): { quimica: number; fisica: number } {
-  const eligible = EDITAL_VERTICALIZADO_DATA.filter((t) => isTopicLevelingEligible(t.id));
-  const quiQuestions = eligible
-    .filter((t) => classifyTopicById(t.id) === 'quimica')
-    .reduce((acc, t) => acc + t.mappedQuestions, 0);
-  const fisQuestions = eligible
-    .filter((t) => classifyTopicById(t.id) === 'fisica')
-    .reduce((acc, t) => acc + t.mappedQuestions, 0);
-
-  const totalQ = Math.max(1, quiQuestions + fisQuestions);
-  const unitMinutes = 5;
-  const totalUnits = WEEKLY_TARGET_MINUTES / unitMinutes;
-
-  const quiUnits = Math.round(((quiQuestions / totalQ) * totalUnits));
-  const fisUnits = totalUnits - quiUnits;
-
   return {
-    quimica: quiUnits * unitMinutes,
-    fisica: fisUnits * unitMinutes,
+    quimica: 250,
+    fisica: 250,
   };
 }
 
@@ -325,14 +312,10 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
     eligibleLeveling.filter((t) => classifyTopicById(t.id) === 'fisica')
   );
 
-  const phase1Quotas = computePhase1WeeklyQuotas(); // ~250 Química, ~350 Física (soma 600)
-  // Divide cada cota semanal exatamente pelos 5 dias úteis em blocos de 5 min somando 120/dia
-  const quiDailyMin = Math.round(phase1Quotas.quimica / STUDY_DAYS_PER_WEEK / 5) * 5;
-  const fisDailyMin = DAILY_TARGET_MINUTES - quiDailyMin;
-
   const phase2Quotas = computePhase2WeeklyQuotas();
-  // Distribuição diária determinística que soma exatamente phase2Quotas[macro] na semana e 120/dia útil
-  const phase2DailyTemplates: Array<Array<{ macroId: MacroAreaId; minutes: number }>> = buildPhase2DailyTemplates(phase2Quotas);
+  // Distribuição diária determinística: 2 aulas de 50 min/dia útil somando 500 min/semana no Pareto
+  const phase2DailyTemplates: Array<Array<{ macroId: MacroAreaId; minutes: number }>> =
+    buildPhase2DailyTemplates(phase2Quotas);
 
   const byMacroOrdered: Record<MacroAreaId, EditalTopic[]> = {
     quimica_processos: sortSyllabusTopicsByPareto(
@@ -350,8 +333,8 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
   };
 
   // Listas progressivas suficientemente grandes para todo o intervalo jan-out/2027
-  const quiPhase1Seq = buildProgressiveTopicCycle(quiLevelingOrdered, 120);
-  const fisPhase1Seq = buildProgressiveTopicCycle(fisLevelingOrdered, 120);
+  const quiPhase1Seq = buildProgressiveTopicCycle(quiLevelingOrdered, 160);
+  const fisPhase1Seq = buildProgressiveTopicCycle(fisLevelingOrdered, 160);
 
   const phase2Seq: Record<MacroAreaId, EditalTopic[]> = {
     quimica_processos: buildProgressiveTopicCycle(byMacroOrdered.quimica_processos, 240),
@@ -360,6 +343,7 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
     eletricidade: buildProgressiveTopicCycle(byMacroOrdered.eletricidade, 180),
   };
 
+  let phase1StudyDayIndex = 0;
   let quiP1Cursor = 0;
   let fisP1Cursor = 0;
   const p2Cursors: Record<MacroAreaId, number> = {
@@ -383,9 +367,6 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
     const weekdayLabel = WEEKDAY_NAMES_PT[weekday];
     const isPhase1 = dateKey <= PHASE_1_END_DATE;
     const phase: SchedulePhase2027 = isPhase1 ? 'nivelamento' : 'pareto_completo';
-    const phaseLabel = isPhase1
-      ? 'Nivelamento — Química e Física'
-      : 'Pareto completo — todas as macroáreas';
 
     if (weekday === 0 || weekday === 6) {
       map.set(dateKey, {
@@ -395,7 +376,9 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
         inSchedulePeriod: true,
         isRestDay: true,
         phase,
-        phaseLabel,
+        phaseLabel: isPhase1
+          ? 'Nivelamento — Química e Física (Descanso)'
+          : 'Pareto completo — todas as macroáreas (Descanso)',
         plannedMinutes: 0,
         blocks: [],
       });
@@ -404,38 +387,34 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
 
     const monToFriIdx = weekday - 1; // 0=Seg .. 4=Sex
     const blocks: CalendarStudyBlock[] = [];
+    let phaseLabel = 'Pareto completo — todas as macroáreas';
 
     if (isPhase1) {
-      const quiTopic = quiPhase1Seq[quiP1Cursor++];
-      const fisTopic = fisPhase1Seq[fisP1Cursor++];
+      // Alterna estritamente 1 matéria por dia útil: dia par = Química, dia ímpar = Física
+      const isQuimicaDay = phase1StudyDayIndex % 2 === 0;
+      phase1StudyDayIndex += 1;
 
-      // Alterna a ordem inicial entre dias pares e ímpares para variedade didática
-      const pair =
-        monToFriIdx % 2 === 0
-          ? [
-              { topic: quiTopic, minutes: quiDailyMin },
-              { topic: fisTopic, minutes: fisDailyMin },
-            ]
-          : [
-              { topic: fisTopic, minutes: fisDailyMin },
-              { topic: quiTopic, minutes: quiDailyMin },
-            ];
+      phaseLabel = isQuimicaDay
+        ? 'Nivelamento — Dia de Química (2 × 50 min)'
+        : 'Nivelamento — Dia de Física (2 × 50 min)';
 
-      pair.forEach((slot, idx) => {
-        if (slot.minutes <= 0) return;
-        const occ = topicOccurrenceCount.get(slot.topic.id) || 0;
-        topicOccurrenceCount.set(slot.topic.id, occ + 1);
+      for (let idx = 0; idx < BLOCKS_PER_DAY; idx++) {
+        const topic = isQuimicaDay
+          ? quiPhase1Seq[quiP1Cursor++]
+          : fisPhase1Seq[fisP1Cursor++];
+        const occ = topicOccurrenceCount.get(topic.id) || 0;
+        topicOccurrenceCount.set(topic.id, occ + 1);
         blocks.push(
           buildBlock({
             dateKey,
             blockIndex: idx,
-            topic: slot.topic,
-            plannedMinutes: slot.minutes,
+            topic,
+            plannedMinutes: BLOCK_DURATION_MINUTES,
             isNivelamento: true,
             occurrenceCount: occ,
           })
         );
-      });
+      }
     } else {
       const template = phase2DailyTemplates[monToFriIdx];
       template.forEach((slot, idx) => {
@@ -477,97 +456,92 @@ function buildFull2027ScheduleMap(): Map<string, CalendarDayPlan> {
 }
 
 /**
- * Gera grade semanal de Segunda a Sexta para a Fase 2 respeitando exatamente as cotas semanais
- * (padrão 235/210/100/55 min -> 120 min/dia útil, 600 min/semana), recalculando automaticamente
- * caso os pesos-fonte mudem.
+ * Gera grade semanal de Segunda a Sexta para a Fase 2 com aulas estritas de 50 minutos
+ * (2 aulas/dia útil = 100 min/dia, 10 aulas/semana = 500 min/semana).
+ * Nenhuma aula pode ter menos de 50 minutos nem 70 minutos.
  */
 function buildPhase2DailyTemplates(
   quotas: Record<MacroAreaId, number>
 ): Array<Array<{ macroId: MacroAreaId; minutes: number }>> {
-  // Caso canônico atual (235, 210, 100, 55) — corresponde exatamente à tabela verificada da seção 8.3
+  // Caso canônico atual: 200 / 150 / 100 / 50 min (4 / 3 / 2 / 1 aulas de 50 min)
   if (
-    quotas.quimica_processos === 235 &&
-    quotas.mecanica_fluidos === 210 &&
+    quotas.quimica_processos === 200 &&
+    quotas.mecanica_fluidos === 150 &&
     quotas.instrumentacao === 100 &&
-    quotas.eletricidade === 55
+    quotas.eletricidade === 50
   ) {
     return [
       // Segunda
       [
         { macroId: 'quimica_processos', minutes: 50 },
         { macroId: 'mecanica_fluidos', minutes: 50 },
-        { macroId: 'instrumentacao', minutes: 20 },
       ],
       // Terça
       [
         { macroId: 'quimica_processos', minutes: 50 },
-        { macroId: 'mecanica_fluidos', minutes: 50 },
-        { macroId: 'eletricidade', minutes: 20 },
+        { macroId: 'instrumentacao', minutes: 50 },
       ],
       // Quarta
       [
-        { macroId: 'quimica_processos', minutes: 50 },
-        { macroId: 'mecanica_fluidos', minutes: 40 },
-        { macroId: 'instrumentacao', minutes: 30 },
+        { macroId: 'mecanica_fluidos', minutes: 50 },
+        { macroId: 'eletricidade', minutes: 50 },
       ],
       // Quinta
       [
-        { macroId: 'quimica_processos', minutes: 45 },
+        { macroId: 'quimica_processos', minutes: 50 },
         { macroId: 'mecanica_fluidos', minutes: 50 },
-        { macroId: 'eletricidade', minutes: 25 },
       ],
       // Sexta
       [
-        { macroId: 'quimica_processos', minutes: 40 },
-        { macroId: 'mecanica_fluidos', minutes: 20 },
+        { macroId: 'quimica_processos', minutes: 50 },
         { macroId: 'instrumentacao', minutes: 50 },
-        { macroId: 'eletricidade', minutes: 10 },
       ],
     ];
   }
 
-  // Fallback algorítmico geral (em múltiplos de 5 min fechando 120 por dia e quota semanal exata)
+  // Fallback algorítmico geral: distribui slots inteiros de 50 min (2 por dia útil)
   const macrosOrder: MacroAreaId[] = [
     'quimica_processos',
     'mecanica_fluidos',
     'instrumentacao',
     'eletricidade',
   ];
-  const remaining: Record<MacroAreaId, number> = { ...quotas };
-  const days: Array<Record<MacroAreaId, number>> = Array.from({ length: 5 }, () => ({
-    quimica_processos: 0,
-    mecanica_fluidos: 0,
-    instrumentacao: 0,
-    eletricidade: 0,
-  }));
+  const remainingSlots: Record<MacroAreaId, number> = {
+    quimica_processos: Math.round(quotas.quimica_processos / BLOCK_DURATION_MINUTES),
+    mecanica_fluidos: Math.round(quotas.mecanica_fluidos / BLOCK_DURATION_MINUTES),
+    instrumentacao: Math.round(quotas.instrumentacao / BLOCK_DURATION_MINUTES),
+    eletricidade: Math.round(quotas.eletricidade / BLOCK_DURATION_MINUTES),
+  };
 
-  for (let d = 0; d < 5; d++) {
-    let dayLeft = DAILY_TARGET_MINUTES;
-    for (const m of macrosOrder) {
-      if (dayLeft <= 0) break;
-      const targetSlice = Math.min(dayLeft, remaining[m], 50);
-      const roundedSlice = Math.floor(targetSlice / 5) * 5;
-      if (roundedSlice > 0) {
-        days[d][m] += roundedSlice;
-        remaining[m] -= roundedSlice;
-        dayLeft -= roundedSlice;
+  const days: Array<Array<{ macroId: MacroAreaId; minutes: number }>> = Array.from(
+    { length: STUDY_DAYS_PER_WEEK },
+    () => []
+  );
+
+  // Distribui alternadamente respeitando 2 aulas distintas por dia quando possível
+  const totalSlots = Object.values(remainingSlots).reduce((a, b) => a + b, 0);
+  let assigned = 0;
+  while (assigned < totalSlots) {
+    let progressed = false;
+    for (let d = 0; d < STUDY_DAYS_PER_WEEK && assigned < totalSlots; d++) {
+      if (days[d].length >= BLOCKS_PER_DAY) continue;
+      // Escolhe macro com mais slots restantes ainda não presente hoje (ou maior restante)
+      const sorted = [...macrosOrder]
+        .filter((m) => remainingSlots[m] > 0)
+        .sort((a, b) => remainingSlots[b] - remainingSlots[a]);
+      const chosen =
+        sorted.find((m) => !days[d].some((slot) => slot.macroId === m)) || sorted[0];
+      if (chosen) {
+        days[d].push({ macroId: chosen, minutes: BLOCK_DURATION_MINUTES });
+        remainingSlots[chosen] -= 1;
+        assigned += 1;
+        progressed = true;
       }
     }
-    while (dayLeft > 0) {
-      const m = macrosOrder.find((id) => remaining[id] >= 5);
-      if (!m) break;
-      const add = Math.min(dayLeft, remaining[m]);
-      days[d][m] += add;
-      remaining[m] -= add;
-      dayLeft -= add;
-    }
+    if (!progressed) break;
   }
 
-  return days.map((dayObj) =>
-    macrosOrder
-      .filter((m) => dayObj[m] > 0)
-      .map((m) => ({ macroId: m, minutes: dayObj[m] }))
-  );
+  return days;
 }
 
 export function isDateIn2027Schedule(dateKey: string): boolean {
