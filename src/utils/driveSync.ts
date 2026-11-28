@@ -19,6 +19,7 @@ import { mergeCesgranrioMemories } from './cesgranrioMemory';
 
 export const STORAGE_KEY_DRIVE_ENDPOINT = 'google_drive_sync_endpoint_v1';
 export const STORAGE_KEY_DRIVE_AUTO_SYNC = 'google_drive_auto_sync_v1';
+export const STORAGE_KEY_DRIVE_AUTO_PUSH = 'google_drive_auto_push_v1';
 export const STORAGE_KEY_DRIVE_VALIDATED = 'google_drive_sync_validated_v1';
 export const STORAGE_KEY_DRIVE_LAST_SYNC = 'google_drive_last_sync_date_v1';
 export const STORAGE_KEY_DRIVE_SAFETY_BACKUP = 'transpetro_pre_drive_sync_safety_backup_v1';
@@ -89,6 +90,22 @@ export function setDriveAutoSync(enabled: boolean): void {
     localStorage.setItem(STORAGE_KEY_DRIVE_AUTO_SYNC, enabled ? 'true' : 'false');
   } catch (err) {
     console.error('Error saving auto-sync preference', err);
+  }
+}
+
+export function getDriveAutoPush(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_DRIVE_AUTO_PUSH) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setDriveAutoPush(enabled: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DRIVE_AUTO_PUSH, enabled ? 'true' : 'false');
+  } catch (err) {
+    console.error('Error saving auto-push preference', err);
   }
 }
 
@@ -476,6 +493,134 @@ export function fetchGoogleDriveDataViaJsonp(
 
     document.head.appendChild(script);
   });
+}
+
+/**
+ * Envia o progresso atual diretamente para o arquivo Petrobras_Enfase_Operacao_Jr.json no Google Drive (doPost).
+ */
+export async function pushBackupToGoogleDrive(
+  endpoint: string,
+  onStatusChange?: (statusText: string) => void
+): Promise<{ success: boolean; message: string }> {
+  const normalized = normalizeAppsScriptUrl(endpoint);
+  if (!normalized || !normalized.startsWith('https://script.google.com/')) {
+    throw new Error('Configure a URL do Apps Script (/exec) antes de enviar.');
+  }
+
+  if (onStatusChange) onStatusChange('Enviando seu progresso para o Google Drive...');
+  const payload = generateBackupPayload();
+  const body = JSON.stringify(payload);
+
+  try {
+    const res = await fetch(normalized, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body,
+      redirect: 'follow',
+    });
+
+    if (res.ok) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success === false) {
+        throw new Error(json.error || 'O Google Apps Script recusou a gravação.');
+      }
+      const nowStr = new Date().toLocaleString('pt-BR');
+      setDriveSyncValidated(true);
+      setLastDriveSyncDate(nowStr);
+      if (onStatusChange) onStatusChange('Progresso salvo no Google Drive com sucesso!');
+      return {
+        success: true,
+        message: (json && json.message) || `Arquivo ${GOOGLE_DRIVE_FILE_NAME} atualizado no Google Drive.`,
+      };
+    }
+
+    throw new Error(`Erro HTTP ${res.status} ao salvar no Google Drive.`);
+  } catch (err: any) {
+    // Em alguns navegadores o redirect do Apps Script bloqueia leitura da resposta CORS,
+    // mesmo tendo executado o doPost. Tentamos fallback no-cors apenas se for falha de leitura CORS.
+    if (err instanceof TypeError) {
+      await fetch(normalized, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body,
+      });
+      const nowStr = new Date().toLocaleString('pt-BR');
+      setDriveSyncValidated(true);
+      setLastDriveSyncDate(nowStr);
+      if (onStatusChange) {
+        onStatusChange('Envio transmitido ao Google Drive. Use "Atualizar dados" em outro aparelho para confirmar.');
+      }
+      return {
+        success: true,
+        message: 'Progresso enviado ao Google Drive.',
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Sincronização bidirecional segura:
+ * 1) Baixa e mescla dados da nuvem (se o arquivo já existir no Drive)
+ * 2) Envia o conjunto unificado de volta para o Google Drive
+ */
+export async function syncBidirectionalWithGoogleDrive(
+  endpoint: string,
+  onStatusChange?: (statusText: string) => void
+): Promise<{ success: boolean; message: string }> {
+  const normalized = normalizeAppsScriptUrl(endpoint);
+  if (!normalized || !normalized.startsWith('https://script.google.com/')) {
+    throw new Error('Configure a URL do Apps Script (/exec) primeiro.');
+  }
+
+  try {
+    if (onStatusChange) onStatusChange('1/2 · Baixando e mesclando dados do Google Drive...');
+    await fetchGoogleDriveDataViaJsonp(normalized, onStatusChange);
+  } catch (err: any) {
+    const msg = String(err?.message || '');
+    // Se o arquivo ainda não existir no Drive, prossegue para criá-lo com os dados atuais
+    if (!msg.includes('Nenhum arquivo')) {
+      throw err;
+    }
+  }
+
+  if (onStatusChange) onStatusChange('2/2 · Enviando versão unificada para o Google Drive...');
+  const pushRes = await pushBackupToGoogleDrive(normalized, onStatusChange);
+  if (onStatusChange) onStatusChange('Nuvem sincronizada! Dados unificados entre dispositivos.');
+  return pushRes;
+}
+
+export function buildDevicePairingLink(baseUrl: string, endpoint: string): string {
+  const cleanEndpoint = normalizeAppsScriptUrl(endpoint);
+  const cleanBase = baseUrl.trim().replace(/\/+$/, '').split('#')[0].split('?')[0];
+  return `${cleanBase}/#drive-sync=${encodeURIComponent(cleanEndpoint)}`;
+}
+
+export function extractDriveSyncEndpointFromLocation(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    let rawParam: string | null = null;
+
+    if (window.location.hash && window.location.hash.includes('drive-sync=')) {
+      const hashQuery = window.location.hash.replace(/^#/, '');
+      const params = new URLSearchParams(hashQuery);
+      rawParam = params.get('drive-sync');
+    } else if (window.location.search && window.location.search.includes('drive-sync=')) {
+      const params = new URLSearchParams(window.location.search);
+      rawParam = params.get('drive-sync');
+    }
+
+    if (!rawParam) return null;
+    const normalized = normalizeAppsScriptUrl(decodeURIComponent(rawParam));
+    if (!normalized.startsWith('https://script.google.com/')) return null;
+
+    const cleanUrl = `${window.location.pathname}${window.location.search.replace(/[?&]drive-sync=[^&]*/g, '')}`;
+    window.history.replaceState(null, '', cleanUrl || '/');
+    return normalized;
+  } catch {
+    return null;
+  }
 }
 
 /**
