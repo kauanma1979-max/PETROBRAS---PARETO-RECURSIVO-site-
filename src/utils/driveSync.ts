@@ -26,6 +26,8 @@ export const STORAGE_KEY_DRIVE_SAFETY_BACKUP = 'transpetro_pre_drive_sync_safety
 export const GOOGLE_DRIVE_DEFAULT_FILE_PREFIX = 'Petrobras_Enfase_Operacao_Jr';
 export const GOOGLE_DRIVE_FILE_NAME = 'Petrobras_Enfase_Operacao_Jr.json';
 export const GOOGLE_DRIVE_ALT_FILE_PREFIX = 'PLATAFORMA TRANSPETRO';
+export const GOOGLE_DRIVE_ACCOUNT_EMAIL = 'marianzo.cs@gmail.com';
+export const GOOGLE_DRIVE_BACKUP_FOLDER = 'backups';
 
 /**
  * Normalizes Google Apps Script URL to always point to the public web app /exec endpoint.
@@ -564,39 +566,63 @@ export async function syncBidirectionalWithGoogleDrive(
 }
 
 /**
- * Retorna o NOVO código do Google Apps Script completo e pronto para copiar e colar,
- * configurado especificamente para buscar o arquivo "Petrobras_Enfase_Operacao_Jr.json".
+ * Retorna o código do Google Apps Script configurado para a conta marianzo.cs@gmail.com
+ * e para a pasta "backups" do Google Drive ("backups/Petrobras_Enfase_Operacao_Jr.json").
  */
-export function getGoogleAppsScriptTemplate(targetFileName: string = GOOGLE_DRIVE_FILE_NAME): string {
+export function getGoogleAppsScriptTemplate(
+  targetFileName: string = GOOGLE_DRIVE_FILE_NAME,
+  targetFolderName: string = GOOGLE_DRIVE_BACKUP_FOLDER,
+  targetAccountEmail: string = GOOGLE_DRIVE_ACCOUNT_EMAIL
+): string {
   return `// ============================================================================
-// NOVO SCRIPT GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PETROBRAS ÊNFASE OPERAÇÃO JR
-// Nome exato do arquivo no Google Drive: "${targetFileName}"
+// GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PETROBRAS ÊNFASE OPERAÇÃO JR
+// Conta Google: ${targetAccountEmail}
+// Pasta no Google Drive: "${targetFolderName}"
+// Arquivo no Google Drive: "${targetFolderName}/${targetFileName}"
 // ============================================================================
 //
 // PASSO A PASSO PARA ATIVAR EM MENOS DE 2 MINUTOS:
-// 1. Acesse: https://script.google.com e clique no botão "+ Novo projeto"
-// 2. Apague o código que estiver no editor, cole este código completo e salve (Ctrl+S ou ícone de disquete)
-// 3. Clique no botão azul "Implantar" (canto superior direito) > "Nova implantação"
+// 1. Faça login em https://script.google.com usando a conta ${targetAccountEmail}
+// 2. Clique em "+ Novo projeto", apague o código padrão e cole este script completo
+// 3. Salve (Ctrl+S) e clique no botão azul "Implantar" > "Nova implantação"
 // 4. Configure:
-//    - Tipo (ícone de engrenagem): Selecione "Aplicativo da Web"
-//    - Descrição: "Sincronizador Petrobras Enfase Operacao Jr"
-//    - Executar como: "Eu" (seu e-mail Google)
-//    - QUEM TEM ACESSO: "Qualquer pessoa" (OBRIGATÓRIO: se deixar 'Somente eu', o app será bloqueado pelo Google!)
-// 5. Clique em "Implantar", autorize as permissões da sua conta e COPIE a URL gerada (ela termina em /exec)
-// 6. Cole a URL no aplicativo e clique em "Atualizar dados do Google Drive"!
+//    - Tipo (engrenagem): "Aplicativo da Web"
+//    - Descrição: "Sincronizador Petrobras Enfase Operacao Jr (${targetFolderName})"
+//    - Executar como: "Eu (${targetAccountEmail})"
+//    - QUEM TEM ACESSO: "Qualquer pessoa" (OBRIGATÓRIO para evitar bloqueio CORS/acesso)
+// 5. Clique em "Implantar", autorize o acesso ao Drive da conta ${targetAccountEmail} e COPIE a URL /exec
+// 6. Cole a URL /exec no aplicativo!
 // ============================================================================
 
-function doGet(e) {
-  var targetName = "Petrobras_Enfase_Operacao_Jr";
-  var exactFileName = "${targetFileName}";
-  var matchingFiles = [];
+var TARGET_FOLDER_NAME = "${targetFolderName}";
+var TARGET_FILE_NAME = "${targetFileName}";
+var EXPECTED_ACCOUNT = "${targetAccountEmail}";
 
-  function checkAndAdd(file) {
-    if (!file || file.isTrashed()) return;
+function findBackupFolder() {
+  var folders = DriveApp.getFolders();
+  var targetLower = TARGET_FOLDER_NAME.toLowerCase();
+  while (folders.hasNext()) {
+    var folder = folders.next();
+    if (!folder.isTrashed() && folder.getName().trim().toLowerCase() === targetLower) {
+      return folder;
+    }
+  }
+  return null;
+}
+
+function getOrCreateBackupFolder() {
+  var existing = findBackupFolder();
+  if (existing) return existing;
+  return DriveApp.createFolder(TARGET_FOLDER_NAME);
+}
+
+function collectMatchingFiles(fileIterator, matchingFiles) {
+  while (fileIterator.hasNext()) {
+    var file = fileIterator.next();
+    if (!file || file.isTrashed()) continue;
     var name = file.getName().trim();
     var lower = name.toLowerCase();
 
-    // 1. Verifica correspondência prioritária com Petrobras_Enfase_Operacao_Jr (e fallback legado)
     var isExact = (lower === "petrobras_enfase_operacao_jr.json" || lower === "petrobras_enfase_operacao_jr");
     var startsWith = (lower.indexOf("petrobras_enfase_operacao_jr") === 0);
     var contains = (lower.indexOf("operacao") !== -1 && lower.indexOf("petrobras") !== -1) ||
@@ -612,46 +638,40 @@ function doGet(e) {
       });
     }
   }
+}
 
-  // 1. Busca rápida indexada no Google Drive (ignora lixeira)
+function doGet(e) {
+  var matchingFiles = [];
+
+  // 1. Busca prioritária dentro da pasta "backups" da conta ${targetAccountEmail}
   try {
-    var searchQueries = [
-      "title contains 'Petrobras_Enfase_Operacao_Jr' and trashed = false",
-      "title contains 'petrobras_enfase_operacao_jr' and trashed = false",
-      "title contains 'PLATAFORMA TRANSPETRO' and trashed = false"
-    ];
-    for (var i = 0; i < searchQueries.length; i++) {
-      var it = DriveApp.searchFiles(searchQueries[i]);
-      while (it.hasNext()) {
-        checkAndAdd(it.next());
-      }
-      if (matchingFiles.length > 0) break;
+    var backupFolder = findBackupFolder();
+    if (backupFolder) {
+      collectMatchingFiles(backupFolder.getFiles(), matchingFiles);
     }
-  } catch (errSearch) {}
+  } catch (errFolder) {}
 
-  // 2. Fallback caso a indexação do Drive esteja em cache: varre os arquivos recentes
+  // 2. Fallback: busca na raiz/Drive caso o arquivo ainda esteja fora da pasta "backups"
   if (matchingFiles.length === 0) {
     try {
-      var allFiles = DriveApp.getFiles();
-      var count = 0;
-      while (allFiles.hasNext() && count < 250) {
-        checkAndAdd(allFiles.next());
-        count++;
+      var searchQueries = [
+        "title contains 'Petrobras_Enfase_Operacao_Jr' and trashed = false",
+        "title contains 'petrobras_enfase_operacao_jr' and trashed = false",
+        "title contains 'PLATAFORMA TRANSPETRO' and trashed = false"
+      ];
+      for (var i = 0; i < searchQueries.length; i++) {
+        collectMatchingFiles(DriveApp.searchFiles(searchQueries[i]), matchingFiles);
+        if (matchingFiles.length > 0) break;
       }
-    } catch (errScan) {}
+    } catch (errSearch) {}
   }
 
-  // Se nenhum arquivo foi encontrado
   if (matchingFiles.length === 0) {
     return outputResponse(e, {
-      error: "Nenhum arquivo '" + exactFileName + "' foi encontrado no seu Google Drive. Salve ou faça upload do arquivo '" + exactFileName + "' no Google Drive e tente novamente."
+      error: "Nenhum arquivo '" + TARGET_FILE_NAME + "' foi encontrado na pasta '" + TARGET_FOLDER_NAME + "' do Google Drive (" + EXPECTED_ACCOUNT + ")."
     });
   }
 
-  // 3. Ordenação inteligente:
-  // - Prioridade 1: Nome exato ("Petrobras_Enfase_Operacao_Jr.json")
-  // - Prioridade 2: Começa com "Petrobras_Enfase_Operacao_Jr"
-  // - Prioridade 3: Mais recentemente modificado (getLastUpdated)
   matchingFiles.sort(function(a, b) {
     if (a.isExact && !b.isExact) return -1;
     if (!a.isExact && b.isExact) return 1;
@@ -668,12 +688,12 @@ function doGet(e) {
     return outputResponse(e, parsed);
   } catch (parseErr) {
     return outputResponse(e, {
-      error: "O arquivo '" + selected.getName() + "' foi localizado no Drive, mas seu conteúdo não é um JSON válido: " + parseErr.message
+      error: "O arquivo '" + selected.getName() + "' foi localizado, mas seu conteúdo não é um JSON válido: " + parseErr.message
     });
   }
 }
 
-// Suporte para salvar ou atualizar diretamente no Google Drive via POST
+// Salva ou atualiza diretamente dentro da pasta "backups" do Google Drive
 function doPost(e) {
   try {
     var content = (e && e.postData && e.postData.contents) ? e.postData.contents : "";
@@ -682,23 +702,24 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Valida sintaxe JSON
     JSON.parse(content);
 
-    var fileName = "${targetFileName}";
-    var files = DriveApp.searchFiles("title = '" + fileName + "' and trashed = false");
+    var folder = getOrCreateBackupFolder();
+    var filesInFolder = folder.getFilesByName(TARGET_FILE_NAME);
     var targetFile;
 
-    if (files.hasNext()) {
-      targetFile = files.next();
+    if (filesInFolder.hasNext()) {
+      targetFile = filesInFolder.next();
       targetFile.setContent(content);
     } else {
-      targetFile = DriveApp.createFile(fileName, content, MimeType.PLAIN_TEXT);
+      targetFile = folder.createFile(TARGET_FILE_NAME, content, MimeType.PLAIN_TEXT);
     }
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: "Arquivo '" + fileName + "' salvo com sucesso no Google Drive!",
+      message: "Arquivo '" + TARGET_FOLDER_NAME + "/" + TARGET_FILE_NAME + "' salvo com sucesso no Google Drive (" + EXPECTED_ACCOUNT + ")!",
+      account: EXPECTED_ACCOUNT,
+      folder: folder.getName(),
       fileName: targetFile.getName(),
       updated: targetFile.getLastUpdated().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);

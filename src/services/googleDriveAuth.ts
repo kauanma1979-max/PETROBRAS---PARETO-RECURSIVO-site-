@@ -127,6 +127,7 @@ export async function googleSignIn(): Promise<{ user: User; accessToken: string 
   provider.addScope('https://www.googleapis.com/auth/drive');
   provider.setCustomParameters({
     prompt: 'select_account',
+    login_hint: 'marianzo.cs@gmail.com',
   });
 
   const result = await signInWithPopup(auth, provider);

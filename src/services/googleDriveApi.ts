@@ -1,6 +1,7 @@
 import { generateBackupPayload, restoreFromRawData } from '../utils/backupStorage';
 import {
   GOOGLE_DRIVE_ALT_FILE_PREFIX,
+  GOOGLE_DRIVE_BACKUP_FOLDER,
   GOOGLE_DRIVE_DEFAULT_FILE_PREFIX,
   GOOGLE_DRIVE_FILE_NAME,
   mergeTranspetroBackupData,
@@ -71,23 +72,45 @@ async function driveFetch(url: string, init?: RequestInit): Promise<Response> {
   return response;
 }
 
-export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | null> {
-  const q = [
-    'trashed = false',
-    `and (name = '${GOOGLE_DRIVE_FILE_NAME}' or name contains '${GOOGLE_DRIVE_DEFAULT_FILE_PREFIX}' or name contains '${GOOGLE_DRIVE_ALT_FILE_PREFIX}')`,
-  ].join(' ');
-
+async function findBackupFolderId(): Promise<string | null> {
   const params = new URLSearchParams({
-    q,
+    q: `trashed = false and mimeType = 'application/vnd.google-apps.folder'`,
     orderBy: 'modifiedTime desc',
-    pageSize: '20',
-    fields: `files(${DRIVE_FIELDS})`,
+    pageSize: '50',
+    fields: 'files(id,name)',
   });
 
   const response = await driveFetch(`${DRIVE_FILES_API}?${params.toString()}`);
   const data = await response.json();
-  const files: DriveFileSummary[] = Array.isArray(data?.files) ? data.files : [];
+  const folders: Array<{ id: string; name: string }> = Array.isArray(data?.files)
+    ? data.files
+    : [];
 
+  const targetLower = GOOGLE_DRIVE_BACKUP_FOLDER.toLowerCase();
+  const match = folders.find((f) => f.name.trim().toLowerCase() === targetLower);
+  return match?.id || null;
+}
+
+async function getOrCreateBackupFolderId(): Promise<string> {
+  const existingId = await findBackupFolderId();
+  if (existingId) return existingId;
+
+  const response = await driveFetch(`${DRIVE_FILES_API}?fields=id,name`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: GOOGLE_DRIVE_BACKUP_FOLDER,
+      mimeType: 'application/vnd.google-apps.folder',
+    }),
+  });
+
+  const created = await response.json();
+  return created.id;
+}
+
+function pickBestBackupFile(files: DriveFileSummary[]): DriveFileSummary | null {
   if (files.length === 0) return null;
 
   const exactMatch = files.find(
@@ -99,6 +122,41 @@ export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | nul
     f.name.trim().toLowerCase().startsWith(GOOGLE_DRIVE_DEFAULT_FILE_PREFIX.toLowerCase())
   );
   return prefixMatch || files[0];
+}
+
+export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | null> {
+  const folderId = await findBackupFolderId();
+  const nameFilter = `(name = '${GOOGLE_DRIVE_FILE_NAME}' or name contains '${GOOGLE_DRIVE_DEFAULT_FILE_PREFIX}' or name contains '${GOOGLE_DRIVE_ALT_FILE_PREFIX}')`;
+
+  // 1. Prioritize files inside the "backups" folder
+  if (folderId) {
+    const folderParams = new URLSearchParams({
+      q: `trashed = false and '${folderId}' in parents and ${nameFilter}`,
+      orderBy: 'modifiedTime desc',
+      pageSize: '20',
+      fields: `files(${DRIVE_FIELDS})`,
+    });
+    const folderResp = await driveFetch(`${DRIVE_FILES_API}?${folderParams.toString()}`);
+    const folderData = await folderResp.json();
+    const folderFiles: DriveFileSummary[] = Array.isArray(folderData?.files)
+      ? folderData.files
+      : [];
+    const bestInFolder = pickBestBackupFile(folderFiles);
+    if (bestInFolder) return bestInFolder;
+  }
+
+  // 2. Fallback: search Drive root/anywhere
+  const params = new URLSearchParams({
+    q: `trashed = false and ${nameFilter}`,
+    orderBy: 'modifiedTime desc',
+    pageSize: '20',
+    fields: `files(${DRIVE_FIELDS})`,
+  });
+
+  const response = await driveFetch(`${DRIVE_FILES_API}?${params.toString()}`);
+  const data = await response.json();
+  const files: DriveFileSummary[] = Array.isArray(data?.files) ? data.files : [];
+  return pickBestBackupFile(files);
 }
 
 export async function listDriveFiles(
@@ -129,7 +187,7 @@ export async function pullAndMergeBackupFromDriveApi(
   const targetFile = specificFile || (await findAppBackupFileInDrive());
   if (!targetFile) {
     throw new Error(
-      `Arquivo "${GOOGLE_DRIVE_FILE_NAME}" não encontrado no seu Google Drive.`
+      `Arquivo "${GOOGLE_DRIVE_FILE_NAME}" não encontrado na pasta "${GOOGLE_DRIVE_BACKUP_FOLDER}" do Google Drive.`
     );
   }
 
@@ -180,9 +238,15 @@ export async function saveBackupToDriveApi(
   const jsonContent = JSON.stringify(payload, null, 2);
 
   const boundary = `petrobras_drive_boundary_${Date.now()}`;
-  const metadata = existingFileId
-    ? { name: GOOGLE_DRIVE_FILE_NAME, mimeType: 'application/json' }
-    : { name: GOOGLE_DRIVE_FILE_NAME, mimeType: 'application/json' };
+  const metadata: Record<string, unknown> = {
+    name: GOOGLE_DRIVE_FILE_NAME,
+    mimeType: 'application/json',
+  };
+
+  if (!existingFileId) {
+    const folderId = await getOrCreateBackupFolderId();
+    metadata.parents = [folderId];
+  }
 
   const multipartBody = [
     `--${boundary}`,

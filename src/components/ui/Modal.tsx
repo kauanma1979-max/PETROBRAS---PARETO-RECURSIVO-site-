@@ -45,6 +45,8 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,12 +57,19 @@ export const Modal: React.FC<ModalProps> = ({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Focus container or first focusable child
+    // Focus first form control if available, otherwise first focusable child
     const focusTimer = requestAnimationFrame(() => {
       const container = containerRef.current;
       if (!container) return;
+      const formFocusables = container.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+      );
+      if (formFocusables.length > 0) {
+        formFocusables[0].focus();
+        return;
+      }
       const focusables = container.querySelectorAll<HTMLElement>(
-        'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
       );
       if (focusables.length > 0) {
         focusables[0].focus();
@@ -72,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -105,7 +114,7 @@ export const Modal: React.FC<ModalProps> = ({
         previousFocusRef.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const modalContent = (
     <AnimatePresence>
@@ -116,7 +125,11 @@ export const Modal: React.FC<ModalProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#04140D]/75 backdrop-blur-xs overflow-y-auto"
-          onClick={closeOnBackdrop ? onClose : undefined}
+          onMouseDown={(e) => {
+            if (closeOnBackdrop && e.target === e.currentTarget) {
+              onCloseRef.current();
+            }
+          }}
         >
           <motion.div
             ref={containerRef}

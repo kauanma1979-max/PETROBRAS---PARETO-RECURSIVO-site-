@@ -42,6 +42,8 @@ import {
   getGoogleAppsScriptTemplate,
   normalizeAppsScriptUrl,
   GOOGLE_DRIVE_FILE_NAME,
+  GOOGLE_DRIVE_ACCOUNT_EMAIL,
+  GOOGLE_DRIVE_BACKUP_FOLDER,
 } from '../utils/driveSync';
 import {
   googleSignIn,
@@ -536,12 +538,12 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
             </div>
             <div>
               <h4 className="text-sm sm:text-base font-display font-bold text-slate-900">
-                Google Drive Direto (Conta Google)
+                Google Drive Direto ({GOOGLE_DRIVE_ACCOUNT_EMAIL})
               </h4>
               <p className="text-xs text-slate-600 mt-0.5 flex flex-wrap items-center gap-1.5">
-                <span>Arquivo de backup:</span>
+                <span>Pasta/arquivo:</span>
                 <code className="font-mono font-semibold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
-                  {GOOGLE_DRIVE_FILE_NAME}
+                  {GOOGLE_DRIVE_BACKUP_FOLDER}/{GOOGLE_DRIVE_FILE_NAME}
                 </code>
               </p>
             </div>
@@ -847,9 +849,12 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
           aria-expanded={showAppsScriptSection}
           className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-bold text-slate-700 hover:bg-[#F6F8F7] transition-colors cursor-pointer"
         >
-          <span className="inline-flex items-center gap-2">
-            <Code className="w-4 h-4 text-slate-500" aria-hidden="true" />
-            Modo Alternativo: Sincronização via Google Apps Script (/exec) &amp; Link Conectado
+          <span className="inline-flex items-center gap-2 text-left">
+            <Code className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />
+            <span>
+              Sincronização via Google Apps Script ({GOOGLE_DRIVE_ACCOUNT_EMAIL} · pasta{' '}
+              <code className="font-mono">{GOOGLE_DRIVE_BACKUP_FOLDER}</code>)
+            </span>
           </span>
           {showAppsScriptSection ? (
             <ChevronUp className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -859,7 +864,19 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
         </button>
 
         {showAppsScriptSection && (
-          <div className="p-5 pt-2 border-t border-slate-100 space-y-4">
+          <div className="p-5 pt-3 border-t border-slate-100 space-y-4">
+            <div className="bg-[#E6F4EC]/70 border border-[#008542]/25 rounded-xl px-3.5 py-2.5 text-xs text-[#071F14] flex flex-wrap items-center justify-between gap-2">
+              <span>
+                <strong>Conta do Script:</strong>{' '}
+                <code className="font-mono font-semibold">{GOOGLE_DRIVE_ACCOUNT_EMAIL}</code>
+              </span>
+              <span>
+                <strong>Destino no Drive:</strong>{' '}
+                <code className="font-mono font-semibold">
+                  {GOOGLE_DRIVE_BACKUP_FOLDER}/{GOOGLE_DRIVE_FILE_NAME}
+                </code>
+              </span>
+            </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="drive-endpoint-input" className="text-xs font-bold text-slate-700">
@@ -1069,7 +1086,11 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
                     </Button>
                   </div>
                   <pre className="bg-[#071F14] text-[#FDB913] p-3.5 rounded-xl text-[11px] font-mono overflow-x-auto max-h-60 leading-relaxed select-all border border-[#123826]">
-                    {getGoogleAppsScriptTemplate(GOOGLE_DRIVE_FILE_NAME)}
+                    {getGoogleAppsScriptTemplate(
+                      GOOGLE_DRIVE_FILE_NAME,
+                      GOOGLE_DRIVE_BACKUP_FOLDER,
+                      GOOGLE_DRIVE_ACCOUNT_EMAIL
+                    )}
                   </pre>
                 </div>
               )}
