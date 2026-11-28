@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MATERIAL_ESTUDOS } from '../data/materialEstudosData';
 import { MindMapSection, MindMapItem } from './MindMapSection';
+import { StudyMarkdownRenderer, renderChemicalAndMathText } from './StudyMarkdownRenderer';
 import { OriginBadge } from './ui/OriginBadge';
 import { SubjectBaseBadge } from './ui/SubjectBaseBadge';
 import { classifyByCodigoRef, classifyModuleId } from '../utils/subjectClassification';
 import { sortMaterialModulesByPareto, sortItemsByCodigoRefPareto } from '../utils/paretoOrdering';
-import { 
-  BookOpen, 
-  Calculator, 
-  Bookmark, 
-  Search, 
-  Lightbulb, 
-  Table, 
-  ChevronRight
+import {
+  BookOpen,
+  Calculator,
+  Bookmark,
+  Search,
+  Lightbulb,
+  Table,
+  ChevronRight,
 } from 'lucide-react';
 
 interface TabMaterialEstudoProps {
@@ -37,18 +38,22 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
   useEffect(() => {
     try {
       localStorage.setItem('transpetro_material_selected_modulo', moduloAtivo);
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [moduloAtivo]);
 
   const [busca, setBusca] = useState<string>('');
 
   // Storage for custom mind maps & user notes per secao
-  const [customDataBySecao, setCustomDataBySecao] = useState<Record<string, { mindMaps?: MindMapItem[]; notes?: string }>>(() => {
+  const [customDataBySecao, setCustomDataBySecao] = useState<
+    Record<string, { mindMaps?: MindMapItem[]; notes?: string }>
+  >(() => {
     const saved = localStorage.getItem('transpetro_material_estudo_custom_v1');
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return {};
       }
     }
@@ -68,17 +73,22 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
         } else {
           setCustomDataBySecao({});
         }
-      } catch (e) { /* ignore */ }
+      } catch {
+        // ignore
+      }
     };
 
     window.addEventListener('transpetro_data_restored', handleRestore);
     return () => window.removeEventListener('transpetro_data_restored', handleRestore);
   }, []);
 
-  const handleSaveSecaoData = (secaoId: string, updated: { mindMaps?: MindMapItem[]; notes?: string }) => {
-    setCustomDataBySecao(prev => ({
+  const handleSaveSecaoData = (
+    secaoId: string,
+    updated: { mindMaps?: MindMapItem[]; notes?: string }
+  ) => {
+    setCustomDataBySecao((prev) => ({
       ...prev,
-      [secaoId]: updated
+      [secaoId]: updated,
     }));
   };
 
@@ -89,7 +99,10 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
     const filtered = moduloSelecionado.secoes.filter((s) => {
       if (!busca) return true;
       const termo = busca.toLowerCase();
-      return s.titulo.toLowerCase().includes(termo) || s.conteudoMarkdown.toLowerCase().includes(termo);
+      return (
+        s.titulo.toLowerCase().includes(termo) ||
+        s.conteudoMarkdown.toLowerCase().includes(termo)
+      );
     });
     return sortItemsByCodigoRefPareto(filtered);
   }, [moduloSelecionado, busca]);
@@ -97,49 +110,51 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Top Banner with Quick Actions */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2 text-xs font-bold text-blue-700 uppercase tracking-wider mb-1.5">
-              <span className="w-2.5 h-5 bg-blue-600 rounded-full"></span>
-              <BookOpen className="w-4 h-4" />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#006837] tracking-wide">
+              <BookOpen className="w-4 h-4 text-[#008542]" aria-hidden="true" />
               <span>Material de Estudo Oficial Condensado</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h2 className="font-display text-2xl sm:text-[26px] font-bold text-[#071F14] tracking-[-0.02em] leading-tight">
               Conhecimentos Específicos — Dutos e Terminais &amp; Operação
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-3xl mt-1 leading-relaxed">
-              Síntese teórica, quadros comparativos, normas técnicas/NRs, fórmulas matemáticas, pontos focais de prova,
-              <strong> mapas mentais em imagem/PDF</strong> e <strong>anotações pessoais</strong>.
+            <p className="text-sm sm:text-[15px] text-slate-600 max-w-3xl leading-relaxed">
+              Síntese teórica, quadros comparativos, normas técnicas/NRs, fórmulas matemáticas,
+              pontos focais de prova, <strong className="font-semibold text-[#071F14]">mapas mentais em imagem/PDF</strong> e{' '}
+              <strong className="font-semibold text-[#071F14]">anotações pessoais</strong>.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               id="btn-open-calc-tab-material"
+              type="button"
               onClick={() => onOpenCalculator()}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-xs cursor-pointer transition"
+              className="h-10 px-4 rounded-xl bg-[#008542] hover:bg-[#006837] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer transition-colors whitespace-nowrap"
             >
-              <Calculator className="w-4 h-4" />
+              <Calculator className="w-4 h-4" aria-hidden="true" />
               <span>Calculadora de Fórmulas</span>
             </button>
           </div>
         </div>
 
-        {/* Module Selector Pills */}
-        <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+        {/* Module Selector Bar */}
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
           {orderedModules.map((mod) => (
             <button
               key={mod.id}
               id={`pill-modulo-${mod.id}`}
+              type="button"
               onClick={() => {
                 setModuloAtivo(mod.id);
                 setBusca('');
               }}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                 moduloAtivo === mod.id
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-[#071F14] text-[#FDB913] shadow-xs'
+                  : 'bg-[#F6F8F7] text-slate-700 hover:bg-[#EFF4F1] border border-slate-200/80'
               }`}
             >
               <span>{mod.titulo}</span>
@@ -151,22 +166,29 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
       {/* Content Area */}
       <div className="space-y-6">
         {/* Module Subtitle & Search */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:px-6 rounded-xl border border-slate-200 shadow-xs">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-bold text-slate-900">{moduloSelecionado.titulo}</h3>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h3 className="font-display text-base sm:text-lg font-bold text-[#071F14]">
+                {moduloSelecionado.titulo}
+              </h3>
               <SubjectBaseBadge category={classifyModuleId(moduloSelecionado.id)} compact />
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">{moduloSelecionado.subtitulo}</p>
+            <p className="text-xs sm:text-[13px] text-slate-600 mt-0.5 leading-relaxed">
+              {moduloSelecionado.subtitulo}
+            </p>
           </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search
+              className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
             <input
               type="text"
               placeholder="Buscar no módulo (conceito, lei, fórmula)..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-blue-600"
+              className="w-full bg-[#F6F8F7] border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs sm:text-[13px] text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:border-[#008542] transition-colors"
             />
           </div>
         </div>
@@ -177,61 +199,74 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
             const secaoCustom = customDataBySecao[secao.id] || {};
 
             return (
-              <div
+              <article
                 key={secao.id}
                 id={`secao-${secao.id}`}
-                className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6"
+                className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-7"
               >
-                {/* Section Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4">
-                  <h4 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2.5">
-                    <Bookmark className="w-5 h-5 text-blue-600 shrink-0" />
-                    <span>{secao.titulo}</span>
-                  </h4>
-                  <div className="flex flex-wrap items-center gap-2">
+                {/* Section Header — Editorial Kicker Above Title */}
+                <header className="border-b border-slate-200/80 pb-5 space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                     <OriginBadge origem={secao.origem} />
                     {classifyByCodigoRef(secao.codigoRef).badges.map((cat) => (
                       <SubjectBaseBadge key={cat} category={cat} compact />
                     ))}
-                    {secao.codigoRef && (
-                      <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                        {secao.codigoRef}
+                    {secao.badge && (
+                      <span className="text-xs font-semibold text-[#006837]">
+                        · {secao.badge}
                       </span>
                     )}
-                    {secao.badge && (
-                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 w-fit">
-                        {secao.badge}
+                    {secao.codigoRef && (
+                      <span className="text-[11px] font-mono font-medium text-slate-500 tabular-nums">
+                        · {secao.codigoRef}
                       </span>
                     )}
                   </div>
-                </div>
 
-                {/* Main Content Render */}
-                <div className="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-3 whitespace-pre-line font-sans">
-                  {secao.conteudoMarkdown}
-                </div>
+                  <h4 className="font-display text-xl sm:text-[22px] font-bold text-[#071F14] tracking-[-0.015em] leading-snug flex items-start gap-2.5">
+                    <Bookmark
+                      className="w-5 h-5 text-[#008542] shrink-0 mt-1"
+                      aria-hidden="true"
+                    />
+                    <span>{secao.titulo}</span>
+                  </h4>
+                </header>
+
+                {/* Main Editorial Study Content */}
+                <StudyMarkdownRenderer markdown={secao.conteudoMarkdown} />
 
                 {/* Optional Table */}
                 {secao.tabelaDestaque && (
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <div className="flex items-center space-x-2 text-xs font-bold text-slate-800">
-                      <Table className="w-4 h-4 text-blue-600" />
-                      <span>Quadro de Referência Rápida:</span>
+                  <div className="bg-[#F6F8F7] p-4 sm:p-5 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center gap-2 font-display text-xs sm:text-sm font-bold text-[#071F14]">
+                      <Table className="w-4 h-4 text-[#008542]" aria-hidden="true" />
+                      <span>Quadro de Referência Rápida</span>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs border-collapse">
+                    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                      <table className="w-full text-left text-xs sm:text-[13px] border-collapse">
                         <thead>
-                          <tr className="bg-slate-100 text-slate-600 border-b border-slate-200 font-semibold">
+                          <tr className="bg-[#EFF4F1] text-[#071F14] border-b border-slate-200 font-display font-semibold">
                             {secao.tabelaDestaque.colunas.map((col, cIdx) => (
-                              <th key={cIdx} className="p-2.5">{col}</th>
+                              <th key={cIdx} className="p-3">
+                                {renderChemicalAndMathText(col)}
+                              </th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200">
+                        <tbody className="divide-y divide-slate-200 tabular-nums">
                           {secao.tabelaDestaque.linhas.map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-slate-100/60 transition">
+                            <tr key={rIdx} className="hover:bg-[#F6F8F7] transition-colors">
                               {row.map((cell, cellIdx) => (
-                                <td key={cellIdx} className="p-2.5 text-slate-700 font-medium">{cell}</td>
+                                <td
+                                  key={cellIdx}
+                                  className={`p-3 ${
+                                    cellIdx === 0
+                                      ? 'font-semibold text-[#071F14]'
+                                      : 'text-slate-700 font-normal'
+                                  }`}
+                                >
+                                  {renderChemicalAndMathText(cell)}
+                                </td>
                               ))}
                             </tr>
                           ))}
@@ -244,31 +279,40 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                 {/* Optional Formulas Cards */}
                 {secao.formulas && secao.formulas.length > 0 && (
                   <div className="space-y-3">
-                    <div className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
-                      <Calculator className="w-4 h-4 text-blue-600" />
-                      <span>Fórmulas Chave do Tópico:</span>
+                    <div className="font-display text-xs sm:text-sm font-bold text-[#071F14] flex items-center gap-2">
+                      <Calculator className="w-4 h-4 text-[#008542]" aria-hidden="true" />
+                      <span>Fórmulas-Chave do Tópico</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {secao.formulas.map((f, fIdx) => (
-                        <div key={fIdx} className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-col justify-between shadow-xs">
+                        <div
+                          key={fIdx}
+                          className="bg-[#F6F8F7] p-4 rounded-xl border border-slate-200 flex flex-col justify-between"
+                        >
                           <div>
-                            <div className="font-bold text-xs text-slate-900 mb-1">{f.nome}</div>
-                            <div className="font-mono text-xs text-blue-700 bg-white p-2 rounded-lg border border-slate-200 font-bold">
-                              {f.formula}
+                            <div className="font-display font-bold text-sm text-[#071F14] mb-2">
+                              {f.nome}
                             </div>
-                            <div className="mt-2 space-y-0.5 text-[11px] text-slate-600">
+                            <div className="font-mono text-xs sm:text-[13px] text-[#006837] bg-white px-3 py-2.5 rounded-lg border border-slate-200 font-semibold tabular-nums">
+                              {renderChemicalAndMathText(f.formula)}
+                            </div>
+                            <div className="mt-3 space-y-1 text-xs text-slate-600 leading-relaxed">
                               {f.variaveis.map((v, vIdx) => (
                                 <div key={vIdx}>
-                                  <strong className="text-slate-800">{v.simbolo}:</strong> {v.significado}
+                                  <strong className="font-mono font-semibold text-[#071F14]">
+                                    {renderChemicalAndMathText(v.simbolo)}:
+                                  </strong>{' '}
+                                  {renderChemicalAndMathText(v.significado)}
                                 </div>
                               ))}
                             </div>
                           </div>
                           <button
+                            type="button"
                             onClick={() => onOpenCalculator(f.nome)}
-                            className="mt-3 w-full py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 text-xs font-semibold text-blue-700 hover:text-white border border-blue-200 transition cursor-pointer flex items-center justify-center gap-1.5"
+                            className="mt-4 w-full py-2 rounded-lg bg-[#E6F4EC] hover:bg-[#008542] text-xs font-semibold text-[#006837] hover:text-white border border-[#008542]/25 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                           >
-                            <Calculator className="w-3.5 h-3.5" />
+                            <Calculator className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>Simular na Calculadora</span>
                           </button>
                         </div>
@@ -278,16 +322,19 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                 )}
 
                 {/* Pontos de Prova / Dicas Finais */}
-                <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center space-x-2 text-xs font-bold text-amber-800">
-                    <Lightbulb className="w-4 h-4 text-amber-600" />
-                    <span>Pontos de Atenção para a Prova (Fundação Cesgranrio):</span>
+                <div className="bg-amber-50/75 border border-amber-200 rounded-xl p-5 space-y-2.5">
+                  <div className="flex items-center gap-2 font-display text-xs sm:text-sm font-bold text-amber-900">
+                    <Lightbulb className="w-4 h-4 text-amber-600" aria-hidden="true" />
+                    <span>Pontos de Atenção para a Prova (Fundação Cesgranrio)</span>
                   </div>
-                  <ul className="space-y-1 text-xs text-slate-700">
+                  <ul className="space-y-2 text-[13.5px] sm:text-sm text-slate-700 leading-relaxed max-w-[76ch]">
                     {secao.pontosDeProva.map((ponto, pIdx) => (
-                      <li key={pIdx} className="flex items-start space-x-2">
-                        <ChevronRight className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span>{ponto}</span>
+                      <li key={pIdx} className="flex items-start gap-2">
+                        <ChevronRight
+                          className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
+                          aria-hidden="true"
+                        />
+                        <span>{renderChemicalAndMathText(ponto)}</span>
                       </li>
                     ))}
                   </ul>
@@ -300,13 +347,15 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                   customData={secaoCustom}
                   onSaveData={handleSaveSecaoData}
                 />
-              </div>
+              </article>
             );
           })}
 
           {secoesFiltradas.length === 0 && (
             <div className="text-center py-12 bg-white rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-slate-500 text-sm">Nenhum conteúdo encontrado para a busca "{busca}".</p>
+              <p className="text-slate-500 text-sm">
+                Nenhum conteúdo encontrado para a busca "{busca}".
+              </p>
             </div>
           )}
         </div>
