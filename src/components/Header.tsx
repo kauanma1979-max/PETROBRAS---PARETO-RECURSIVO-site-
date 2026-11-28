@@ -10,57 +10,49 @@ import {
 import { ProgressBar } from './ui/ProgressBar';
 import { PetrobrasLogo } from './PetrobrasLogo';
 import {
-  DAILY_GOAL_MINUTES,
-  formatMinutesAsHoursMinutes,
   getDistinctFocusDaysCount,
-  getNetFocusSecondsForDate,
   getWeekdayFocusStreakCount,
-  isWeekdayDateKey,
   loadFocusLogs,
-  toLocalDateKey,
 } from '../utils/studyFocusStorage';
 
 interface HeaderProps {
+  completedSessions: number;
+  totalSessions: number;
   onResetProgress: () => void;
   onExportReport: () => void;
   onOpenBackupModal: () => void;
   onOpenDriveSync?: () => void;
 }
 
-interface HeaderFocusSnapshot {
-  todayNetMinutes: number;
-  todayGoalPct: number;
-  isTodayWeekday: boolean;
-  distinctDays: number;
-  streakDays: number;
-}
-
-function readHeaderFocusSnapshot(): HeaderFocusSnapshot {
-  const todayKey = toLocalDateKey();
-  const logs = loadFocusLogs();
-  const todayNetMinutes = Math.floor(getNetFocusSecondsForDate(todayKey, logs) / 60);
-  return {
-    todayNetMinutes,
-    todayGoalPct: Math.min(100, Math.round((todayNetMinutes / DAILY_GOAL_MINUTES) * 100)),
-    isTodayWeekday: isWeekdayDateKey(todayKey),
-    distinctDays: getDistinctFocusDaysCount(logs),
-    streakDays: getWeekdayFocusStreakCount(logs, todayKey),
-  };
-}
-
 export const Header: React.FC<HeaderProps> = ({
+  completedSessions,
+  totalSessions,
   onResetProgress,
   onExportReport,
   onOpenBackupModal,
-  onOpenDriveSync,
+  onOpenDriveSync
 }) => {
-  const [focusSnapshot, setFocusSnapshot] = useState<HeaderFocusSnapshot>(() =>
-    readHeaderFocusSnapshot()
-  );
+  const safeTotal = Math.max(1, totalSessions);
+  const progressPercentage = Math.min(100, Math.round((completedSessions / safeTotal) * 100));
+
+  const [focusCounters, setFocusCounters] = useState<{
+    distinctDays: number;
+    streakDays: number;
+  }>(() => {
+    const logs = loadFocusLogs();
+    return {
+      distinctDays: getDistinctFocusDaysCount(logs),
+      streakDays: getWeekdayFocusStreakCount(logs),
+    };
+  });
 
   useEffect(() => {
     const syncCounters = () => {
-      setFocusSnapshot(readHeaderFocusSnapshot());
+      const logs = loadFocusLogs();
+      setFocusCounters({
+        distinctDays: getDistinctFocusDaysCount(logs),
+        streakDays: getWeekdayFocusStreakCount(logs),
+      });
     };
     window.addEventListener('transpetro_focus_updated', syncCounters);
     window.addEventListener('transpetro_data_restored', syncCounters);
@@ -135,32 +127,19 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 bg-[#0A291A] px-3.5 py-2.5 rounded-xl border border-[#184831]">
             <div className="flex items-center gap-3">
               <div>
-                <div className="text-[11px] text-slate-300 font-medium">
-                  {focusSnapshot.isTodayWeekday ? 'Meta Hoje (50+50m)' : 'Meta Hoje (Descanso)'}
-                </div>
+                <div className="text-[11px] text-slate-300 font-medium">Ciclos &amp; Sessões</div>
                 <div className="text-xs sm:text-sm font-bold text-[#FDB913] font-mono tabular-nums">
-                  {focusSnapshot.isTodayWeekday ? (
-                    <>
-                      {formatMinutesAsHoursMinutes(focusSnapshot.todayNetMinutes)}{' '}
-                      <span className="text-slate-200 font-normal">
-                        / 1h40min ({focusSnapshot.todayGoalPct}%)
-                      </span>
-                    </>
-                  ) : focusSnapshot.todayNetMinutes > 0 ? (
-                    <>
-                      {formatMinutesAsHoursMinutes(focusSnapshot.todayNetMinutes)}{' '}
-                      <span className="text-slate-200 font-normal">(extra)</span>
-                    </>
-                  ) : (
-                    <span className="text-slate-200 font-normal">Fim de semana</span>
-                  )}
+                  {completedSessions}{' '}
+                  <span className="text-slate-200 font-normal">
+                    / {totalSessions} sessões ({progressPercentage}%)
+                  </span>
                 </div>
               </div>
               <div className="w-24 sm:w-28">
                 <ProgressBar
-                  value={focusSnapshot.todayNetMinutes}
-                  max={DAILY_GOAL_MINUTES}
-                  label="Progresso diário de foco (2 × 50 min)"
+                  value={completedSessions}
+                  max={totalSessions}
+                  label="Progresso de sessões concluídas"
                   tone="gold"
                   trackTheme="dark"
                   height="md"
@@ -178,9 +157,9 @@ export const Header: React.FC<HeaderProps> = ({
                   Foco (Seg–Sex)
                 </div>
                 <div className="text-xs font-bold text-white font-mono tabular-nums whitespace-nowrap">
-                  {focusSnapshot.distinctDays} {focusSnapshot.distinctDays === 1 ? 'dia' : 'dias'}{' '}
+                  {focusCounters.distinctDays} {focusCounters.distinctDays === 1 ? 'dia' : 'dias'}{' '}
                   <span className="text-[#FDB913]">
-                    · {focusSnapshot.streakDays} em sequência
+                    · {focusCounters.streakDays} em sequência
                   </span>
                 </div>
               </div>
@@ -228,8 +207,8 @@ export const Header: React.FC<HeaderProps> = ({
                 id="btn-reset-progress"
                 type="button"
                 onClick={onResetProgress}
-                aria-label="Reiniciar registros de foco e cronômetro"
-                title="Reiniciar Registros de Foco e Cronômetro"
+                aria-label="Reiniciar progresso das sessões de estudo"
+                title="Reiniciar Progresso das Sessões"
                 className="h-9 w-9 rounded-lg bg-[#05160E] hover:bg-rose-950/80 text-slate-300 hover:text-rose-300 border border-[#1F5A3D] transition-colors inline-flex items-center justify-center shrink-0 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />

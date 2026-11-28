@@ -26,6 +26,7 @@ export interface FocusLogSegment {
   durationSeconds: number;
   topicId?: string;
   scheduleBlockId?: string;
+  legacySessionId?: string;
   macroAreaId?: string;
   topicTitle?: string;
   type: 'focus';
@@ -36,6 +37,7 @@ export interface PomodoroActiveState {
   sessionId: string;
   dateKey: string;
   scheduleBlockId?: string;
+  legacySessionId?: string;
   topicId?: string;
   macroAreaId?: string;
   topicTitle: string;
@@ -60,6 +62,7 @@ export interface StudyResumeState {
   updatedAt: number;
   dateKey: string;
   scheduleBlockId?: string;
+  legacySessionId?: string;
   topicId?: string;
   macroAreaId?: string;
   topicTitle?: string;
@@ -142,6 +145,7 @@ export function deduplicateFocusLogs(logs: unknown[]): FocusLogSegment[] {
       durationSeconds: Math.round(item.durationSeconds),
       topicId: item.topicId,
       scheduleBlockId: item.scheduleBlockId,
+      legacySessionId: item.legacySessionId,
       macroAreaId: item.macroAreaId,
       topicTitle: item.topicTitle,
       type: 'focus',
@@ -185,6 +189,7 @@ export function splitFocusIntervalByLocalDate(params: {
   endedAtMs: number;
   topicId?: string;
   scheduleBlockId?: string;
+  legacySessionId?: string;
   macroAreaId?: string;
   topicTitle?: string;
   status: 'completed' | 'interrupted';
@@ -195,6 +200,7 @@ export function splitFocusIntervalByLocalDate(params: {
     endedAtMs,
     topicId,
     scheduleBlockId,
+    legacySessionId,
     macroAreaId,
     topicTitle,
     status,
@@ -238,6 +244,7 @@ export function splitFocusIntervalByLocalDate(params: {
         durationSeconds: clampedSeconds,
         topicId,
         scheduleBlockId,
+        legacySessionId,
         macroAreaId,
         topicTitle,
         type: 'focus',
@@ -272,6 +279,7 @@ export function loadActivePomodoroState(): PomodoroActiveState | null {
       sessionId: parsed.sessionId,
       dateKey: typeof parsed.dateKey === 'string' ? parsed.dateKey : toLocalDateKey(),
       scheduleBlockId: parsed.scheduleBlockId,
+      legacySessionId: parsed.legacySessionId,
       topicId: parsed.topicId,
       macroAreaId: parsed.macroAreaId,
       topicTitle: parsed.topicTitle || 'Sessão de Estudo',
@@ -346,6 +354,7 @@ export function loadStudyResumeState(): StudyResumeState | null {
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       dateKey: parsed.dateKey,
       scheduleBlockId: parsed.scheduleBlockId,
+      legacySessionId: parsed.legacySessionId,
       topicId: parsed.topicId,
       macroAreaId: parsed.macroAreaId,
       topicTitle: parsed.topicTitle,
@@ -381,7 +390,7 @@ export function getNetFocusMinutesForDate(dateKey: string, logs?: FocusLogSegmen
 }
 
 /**
- * Total semanal considerando estritamente segunda a sexta-feira (meta semanal de 500 min = 10 × 50 min).
+ * Total semanal considerando estritamente segunda a sexta-feira (meta semanal de 600 min).
  */
 export function getWeeklyWeekdayFocusSeconds(
   referenceDateKey: string,
@@ -484,7 +493,7 @@ export function getMacroFocusSecondsDistribution(
 }
 
 /**
- * Calcula a duração do próximo bloco de foco: min(50 min, saldo restante para 100 min).
+ * Calcula a duração do próximo bloco de foco: min(50 min, saldo restante para 120 min).
  */
 export function computeNextFocusDurationSeconds(alreadyLoggedSecondsOnDate: number): number {
   const remainingGoal = Math.max(0, DAILY_GOAL_SECONDS - alreadyLoggedSecondsOnDate);

@@ -1,3 +1,4 @@
+import type { StudySession } from '../data/scheduleData';
 import type { OrigemEdital } from '../components/ui/OriginBadge';
 import {
   getCalendarDayPlan,
@@ -24,9 +25,10 @@ import {
 } from './studyFocusStorage';
 
 export interface TimerLaunchTarget {
-  kind: 'calendar-block' | 'restored-pomodoro';
+  kind: 'calendar-block' | 'legacy-session' | 'restored-pomodoro';
   dateKey: string;
   scheduleBlockId?: string;
+  legacySessionId?: string;
   topicId?: string;
   macroAreaId?: string;
   topicTitle: string;
@@ -40,6 +42,7 @@ export interface TimerLaunchTarget {
   keyTrap?: string;
   isNivelamento?: boolean;
   plannedMinutes?: number;
+  legacySession?: StudySession;
   restoredState?: PomodoroActiveState;
 }
 
@@ -88,6 +91,24 @@ export function buildTimerLaunchTargetFromCalendarBlock(
   };
 }
 
+export function buildTimerLaunchTargetFromLegacySession(
+  session: StudySession,
+  dateKey: string = toLocalDateKey()
+): TimerLaunchTarget {
+  return {
+    kind: 'legacy-session',
+    dateKey,
+    legacySessionId: session.id,
+    topicTitle: session.blockA.topic,
+    subjectTitle: `${session.id} · ${session.title}`,
+    origem: session.blockA.origem,
+    codigoRef: session.blockA.codigoRef,
+    notes: session.blockA.notes,
+    questionsTarget: session.blockA.questionsTarget,
+    legacySession: session,
+  };
+}
+
 export function buildTimerLaunchTargetFromRestoredPomodoro(
   state: PomodoroActiveState
 ): TimerLaunchTarget {
@@ -95,6 +116,7 @@ export function buildTimerLaunchTargetFromRestoredPomodoro(
     kind: 'restored-pomodoro',
     dateKey: state.dateKey,
     scheduleBlockId: state.scheduleBlockId,
+    legacySessionId: state.legacySessionId,
     topicId: state.topicId,
     macroAreaId: state.macroAreaId,
     topicTitle: state.topicTitle,
@@ -106,7 +128,7 @@ export function buildTimerLaunchTargetFromRestoredPomodoro(
 export function recordStudyResumePointer(
   target: Pick<
     TimerLaunchTarget,
-    'dateKey' | 'scheduleBlockId' | 'topicId' | 'macroAreaId' | 'topicTitle' | 'subjectTitle'
+    'dateKey' | 'scheduleBlockId' | 'legacySessionId' | 'topicId' | 'macroAreaId' | 'topicTitle' | 'subjectTitle'
   >,
   lastAction: StudyResumeState['lastAction']
 ): StudyResumeState {
@@ -114,6 +136,7 @@ export function recordStudyResumePointer(
     updatedAt: Date.now(),
     dateKey: target.dateKey,
     scheduleBlockId: target.scheduleBlockId,
+    legacySessionId: target.legacySessionId,
     topicId: target.topicId,
     macroAreaId: target.macroAreaId,
     topicTitle: target.topicTitle,
@@ -200,9 +223,10 @@ export function resolveStudyResumeContext(
       const launchTarget: TimerLaunchTarget = matchedBlock
         ? buildTimerLaunchTargetFromCalendarBlock(matchedBlock)
         : {
-            kind: 'calendar-block',
+            kind: resumeState.legacySessionId ? 'legacy-session' : 'calendar-block',
             dateKey: isWeekendToday ? toLocalDateKey() : resumeState.dateKey,
             scheduleBlockId: resumeState.scheduleBlockId,
+            legacySessionId: resumeState.legacySessionId,
             topicId: resumeState.topicId,
             macroAreaId: resumeState.macroAreaId,
             topicTitle: resumeState.topicTitle,
