@@ -27,17 +27,12 @@ import {
   Database,
   ShieldAlert,
   TrendingUp,
-  Brain,
 } from 'lucide-react';
 import {
   exportFullBackup,
   STORAGE_KEYS,
   exportErrorNotebookJson,
 } from '../utils/backupStorage';
-import {
-  findMatchingSyllabusTopicId,
-  type CesgranrioAiLaunchRequest,
-} from '../data/cesgranrioDna';
 
 export interface ErrorEntry {
   id: string;
@@ -304,11 +299,7 @@ const ORDERED_CORRELACOES_DISCIPLINAS = [...CORRELACOES_DISCIPLINAS].sort((a, b)
   return a.nome.localeCompare(b.nome, 'pt-BR');
 });
 
-interface ErrorNotebookProps {
-  onLaunchCesgranrioAi?: (req: CesgranrioAiLaunchRequest) => void;
-}
-
-export const ErrorNotebook: React.FC<ErrorNotebookProps> = ({ onLaunchCesgranrioAi }) => {
+export const ErrorNotebook: React.FC = () => {
   const [errors, setErrors] = useState<ErrorEntry[]>(() => {
     try {
       const isCustomized = localStorage.getItem('transpetro_caderno_erros_customized') === 'true';
@@ -1049,25 +1040,7 @@ export const ErrorNotebook: React.FC<ErrorNotebookProps> = ({ onLaunchCesgranrio
                       </h4>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-auto">
-                      {onLaunchCesgranrioAi && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Brain className="w-3.5 h-3.5 text-[#006837]" aria-hidden="true" />}
-                          onClick={() =>
-                            onLaunchCesgranrioAi({
-                              topicId: findMatchingSyllabusTopicId(err.subtopico),
-                              subTab: 'questoes',
-                              customContext: `Corrigir erro registrado: ${err.subtopico} — ${err.motivoErro}`,
-                              timestamp: Date.now(),
-                            })
-                          }
-                          title="Treinar este erro com questões inéditas Cesgranrio"
-                        >
-                          Treinar Erro
-                        </Button>
-                      )}
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
                       <Button
                         variant="outline"
                         size="sm"

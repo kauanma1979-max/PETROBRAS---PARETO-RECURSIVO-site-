@@ -11,16 +11,94 @@ export interface ConfusedPair {
   bancaTrap: string;
 }
 
+export interface CesgranrioReferenceProfile {
+  id: 'operacao_jr' | 'dutos_terminais';
+  title: string;
+  provaReferencia: string;
+  origem: OrigemEdital;
+  composicao: string;
+  distribuicao: { label: string; questoes: number }[];
+  focoTecnico: string;
+}
+
+export interface CesgranrioDistractorPattern {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export const BANCA_PROFILE = {
-  title: 'DNA da Banca: Fundação CESGRANRIO',
+  title: 'Raio-X da Banca: Fundação Cesgranrio',
   subtitle:
-    'Como a Fundação CESGRANRIO cobra os conteúdos técnicos de Operação Júnior e Dutos e Terminais no Sistema Petrobras — estrutura das provas, distratores reais e pares conceituais.',
+    'Como a Fundação Cesgranrio cobra os conteúdos técnicos no Sistema Petrobras e Transpetro — provas de múltipla escolha (A–E), perfis históricos e armadilhas recorrentes.',
   cesgranrioRules: [
-    'Múltipla escolha com 5 alternativas (A–E) e apenas uma correta, exigindo compreensão conceitual com aplicação prática em refinarias, terminais aquaviários, dutos e parques de tanques.',
+    'Múltipla escolha com 5 alternativas (A–E) e apenas 1 correta, exigindo compreensão conceitual com aplicação prática em refinarias, terminais aquaviários, dutos e parques de tanques.',
     'Provas de 60 questões sem uso de calculadora: cálculos numéricos limpos com forte exploração de unidades de medida (4–20 mA, Stevin, Bernoulli, PV=nRT em Kelvin, estequiometria) e simplificações diretas.',
     'Distratores tecnicamente plausíveis construídos sobre erros reais de raciocínio: inversão de relações físicas, troca de unidades, erro de sinal, confusão entre equipamentos e desconsideração de condições operacionais.',
     'Cobrança precisa de normas técnicas e de segurança (NR-13, NR-20, NR-33, API/ASME, simbologia ISA-5.1), além de leitura e interpretação de gráficos, curvas de bombas, tabelas e esquemas de processo.',
   ],
+  referenceProfiles: [
+    {
+      id: 'operacao_jr',
+      title: 'Operação Júnior (Petrobras / Transpetro)',
+      provaReferencia: 'Transpetro 2018 — Técnico de Operação Júnior',
+      origem: 'petrobras',
+      composicao: '60 questões A–E · Foco em Conhecimentos Específicos',
+      distribuicao: [
+        { label: 'Química', questoes: 16 },
+        { label: 'Física', questoes: 11 },
+        { label: 'Mecânica', questoes: 11 },
+        { label: 'Demais áreas', questoes: 22 },
+      ],
+      focoTecnico:
+        'Equilíbrio químico, estequiometria, gases, termodinâmica, mecânica dos fluidos, bombas, trocadores e segurança de processo.',
+    },
+    {
+      id: 'dutos_terminais',
+      title: 'Dutos e Terminais (Transpetro)',
+      provaReferencia: 'Transpetro 2023.1 — Técnico de Dutos e Terminais',
+      origem: 'transpetro',
+      composicao: '60 questões A–E (20 Básicas + 40 Específicas)',
+      distribuicao: [
+        { label: 'Conhecimentos Básicos', questoes: 20 },
+        { label: 'Conhecimentos Específicos', questoes: 40 },
+      ],
+      focoTecnico:
+        'Instrumentação 4–20 mA, válvulas FO/FC, SIS, ISA-5.1, escoamento em dutos, cavitação/NPSH, tanques, PIG, corrosão e NRs.',
+    },
+  ] as CesgranrioReferenceProfile[],
+  distractorPatterns: [
+    {
+      id: 'conceitos_semelhantes',
+      label: 'Confusão entre conceitos semelhantes',
+      description: 'Troca termos próximos como exatidão × precisão, agente oxidante × redutor ou gaveta × globo.',
+    },
+    {
+      id: 'inversao_relacoes',
+      label: 'Inversão de relações físicas',
+      description: 'Inverte proporcionalidades diretas e inversas (ex.: viscosidade × Reynolds, pressão × velocidade em Bernoulli).',
+    },
+    {
+      id: 'troca_unidades',
+      label: 'Troca de unidades de medida',
+      description: 'Usa °C em vez de Kelvin em gases ideais, esquece o zero vivo de 4 mA ou mistura bar/Pa/mca.',
+    },
+    {
+      id: 'erro_sinal',
+      label: 'Erro de sinal ou convenção',
+      description: 'Inverte sinal de ΔH (endo/exo), ΔU = Q − W, balanço de massa ou sentido de corrente/fluxo.',
+    },
+    {
+      id: 'confusao_equipamentos',
+      label: 'Confusão entre equipamentos',
+      description: 'Troca bomba centrífuga por deslocamento positivo, termopar por Pt100 ou válvula falha-abre (FO) por falha-fecha (FC).',
+    },
+    {
+      id: 'condicoes_operacionais',
+      label: 'Desconsideração de condições operacionais',
+      description: 'Ignora pressão de vapor/NPSH, regime CA vs CC em transformadores ou estado físico nas CNTP.',
+    },
+  ] as CesgranrioDistractorPattern[],
 };
 
 export const PARES_CONCEITUAIS_IRMAOS: ConfusedPair[] = [

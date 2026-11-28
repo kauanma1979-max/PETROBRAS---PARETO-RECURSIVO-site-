@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { ProgressBar } from './ui/ProgressBar';
 import { PetrobrasLogo } from './PetrobrasLogo';
+import { PWAInstallButton } from './PWAInstallButton';
+import { subscribeGoogleAuth } from '../services/googleDriveAuth';
 import {
   DAILY_GOAL_MINUTES,
   formatMinutesAsHoursMinutes,
@@ -57,14 +59,19 @@ export const Header: React.FC<HeaderProps> = ({
   const [focusSnapshot, setFocusSnapshot] = useState<HeaderFocusSnapshot>(() =>
     readHeaderFocusSnapshot()
   );
+  const [driveConnectedEmail, setDriveConnectedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const syncCounters = () => {
       setFocusSnapshot(readHeaderFocusSnapshot());
     };
+    const unsubAuth = subscribeGoogleAuth(({ user, hasToken }) => {
+      setDriveConnectedEmail(hasToken && user ? user.email || user.displayName || 'Conectado' : null);
+    });
     window.addEventListener('transpetro_focus_updated', syncCounters);
     window.addEventListener('transpetro_data_restored', syncCounters);
     return () => {
+      unsubAuth();
       window.removeEventListener('transpetro_focus_updated', syncCounters);
       window.removeEventListener('transpetro_data_restored', syncCounters);
     };
@@ -187,15 +194,23 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 sm:border-l sm:border-[#1B4F36] sm:pl-3">
+              <PWAInstallButton />
               <button
                 id="btn-open-drive-sync"
                 type="button"
                 onClick={onOpenDriveSync || onOpenBackupModal}
                 aria-label="Sincronizar dados com o Google Drive"
-                title="Sincronizar dados com o Google Drive (Nuvem)"
+                title={
+                  driveConnectedEmail
+                    ? `Google Drive conectado (${driveConnectedEmail})`
+                    : 'Sincronizar dados com o Google Drive (Nuvem)'
+                }
                 className="h-9 px-3 rounded-lg bg-[#05160E] hover:bg-[#113825] text-slate-100 border border-[#1F5A3D] transition-colors text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <Cloud className="w-3.5 h-3.5 text-[#FDB913]" aria-hidden="true" />
+                <Cloud
+                  className={`w-3.5 h-3.5 ${driveConnectedEmail ? 'text-[#22C55E]' : 'text-[#FDB913]'}`}
+                  aria-hidden="true"
+                />
                 <span className="hidden sm:inline">Drive</span>
               </button>
 

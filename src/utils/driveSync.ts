@@ -15,7 +15,6 @@ import {
   type PomodoroActiveState,
   type StudyResumeState,
 } from './studyFocusStorage';
-import { mergeCesgranrioMemories } from './cesgranrioMemory';
 
 export const STORAGE_KEY_DRIVE_ENDPOINT = 'google_drive_sync_endpoint_v1';
 export const STORAGE_KEY_DRIVE_AUTO_SYNC = 'google_drive_auto_sync_v1';
@@ -329,11 +328,6 @@ export function mergeTranspetroBackupData(
       ? remoteData.calendarSelectedDate
       : undefined;
 
-  const mergedCesgranrioMemory = mergeCesgranrioMemories(
-    local.data?.cesgranrioPedagogicalMemory,
-    remoteData.cesgranrioPedagogicalMemory
-  );
-
   // 13. Other Storage Keys
   const localOther = (local.data?.otherStorageKeys && typeof local.data.otherStorageKeys === 'object')
     ? local.data.otherStorageKeys
@@ -362,7 +356,6 @@ export function mergeTranspetroBackupData(
       pomodoroActiveState: mergedActiveState,
       studyResumeState: mergedResumeState,
       calendarSelectedDate: mergedCalendarSelectedDate,
-      cesgranrioPedagogicalMemory: mergedCesgranrioMemory,
       otherStorageKeys: mergedOther
     }
   };

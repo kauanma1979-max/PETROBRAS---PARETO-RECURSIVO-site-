@@ -25,7 +25,7 @@ export const NAV_TABS: NavTabItem[] = [
   { id: 'material', label: 'Material de Estudos', shortLabel: 'Material', icon: BookMarked },
   { id: 'cronograma', label: 'Ciclos de Estudo', shortLabel: 'Ciclos', icon: Layers },
   { id: 'cortes', label: 'Regras de Corte', shortLabel: 'Cortes', icon: Scissors },
-  { id: 'banca', label: 'DNA Cesgranrio', shortLabel: 'Cesgranrio', icon: AlertTriangle },
+  { id: 'banca', label: 'Raio-X Cesgranrio', shortLabel: 'Cesgranrio', icon: AlertTriangle },
   { id: 'caderno', label: 'Caderno de Erros', shortLabel: 'Caderno Erros', icon: BookOpen }
 ];
 
