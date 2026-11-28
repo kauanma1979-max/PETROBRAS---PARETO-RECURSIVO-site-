@@ -188,10 +188,10 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
             <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">
               <div className="text-[11px] text-slate-600 flex items-center justify-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#008542]" aria-hidden="true" />
-                <span>Sessões Feitas</span>
+                <span>Anotações Dias</span>
               </div>
               <div className="text-sm font-bold text-slate-900 mt-0.5 font-mono tabular-nums">
-                {stats.completedDaysCount}
+                {stats.scheduleNotesCount}
               </div>
             </div>
             <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-center">

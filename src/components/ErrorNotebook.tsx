@@ -27,12 +27,17 @@ import {
   Database,
   ShieldAlert,
   TrendingUp,
+  Brain,
 } from 'lucide-react';
 import {
   exportFullBackup,
   STORAGE_KEYS,
   exportErrorNotebookJson,
 } from '../utils/backupStorage';
+import {
+  findMatchingSyllabusTopicId,
+  type CesgranrioAiLaunchRequest,
+} from '../data/cesgranrioDna';
 
 export interface ErrorEntry {
   id: string;
@@ -158,7 +163,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeText: 'text-slate-800',
     },
     subtopicosFrequentes: [
-      'Interpretação Textual, Tipologia e Inferência Cesgranrio / Cebraspe',
+      'Interpretação Textual, Tipologia e Inferência Cesgranrio',
       'Crase, Regência Verbal/Nominal e Uso de Pronomes Relativos',
       'Concordância Verbal e Nominal (Partícula SE e Sujeito Composto)',
       'Pontuação e Valor Semântico das Conjunções (Coesão)',
@@ -275,7 +280,7 @@ const INITIAL_SAMPLE_ERRORS: ErrorEntry[] = [
     origem: 'ambos',
     subtopico: 'Eletromagnetismo — Funcionamento de Transformadores',
     enunciadoResumido:
-      'Cebraspe afirmava que um transformador ideal eleva tensão contínua (CC) proporcionalmente à relação de espiras.',
+      'Questão da banca afirmava em uma das alternativas que um transformador ideal eleva tensão contínua (CC) proporcionalmente à relação de espiras.',
     motivoErro:
       'Apliquei V1/V2 = N1/N2 sem verificar o regime da fonte de alimentação.',
     regraCorreta:
@@ -299,7 +304,11 @@ const ORDERED_CORRELACOES_DISCIPLINAS = [...CORRELACOES_DISCIPLINAS].sort((a, b)
   return a.nome.localeCompare(b.nome, 'pt-BR');
 });
 
-export const ErrorNotebook: React.FC = () => {
+interface ErrorNotebookProps {
+  onLaunchCesgranrioAi?: (req: CesgranrioAiLaunchRequest) => void;
+}
+
+export const ErrorNotebook: React.FC<ErrorNotebookProps> = ({ onLaunchCesgranrioAi }) => {
   const [errors, setErrors] = useState<ErrorEntry[]>(() => {
     try {
       const isCustomized = localStorage.getItem('transpetro_caderno_erros_customized') === 'true';
@@ -653,7 +662,7 @@ export const ErrorNotebook: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm sm:text-base font-display font-bold text-slate-900 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-[#008542] shrink-0" aria-hidden="true" />
-            <span>Cadernos por Área &amp; Correlações Cesgranrio / Cebraspe</span>
+            <span>Cadernos por Área &amp; Correlações Cesgranrio</span>
           </h3>
           <span className="text-xs text-slate-500 font-medium">
             Clique em um tópico para anotar diretamente no caderno
@@ -1040,7 +1049,25 @@ export const ErrorNotebook: React.FC = () => {
                       </h4>
                     </div>
 
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                    <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-auto">
+                      {onLaunchCesgranrioAi && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<Brain className="w-3.5 h-3.5 text-[#006837]" aria-hidden="true" />}
+                          onClick={() =>
+                            onLaunchCesgranrioAi({
+                              topicId: findMatchingSyllabusTopicId(err.subtopico),
+                              subTab: 'questoes',
+                              customContext: `Corrigir erro registrado: ${err.subtopico} — ${err.motivoErro}`,
+                              timestamp: Date.now(),
+                            })
+                          }
+                          title="Treinar este erro com questões inéditas Cesgranrio"
+                        >
+                          Treinar Erro
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
