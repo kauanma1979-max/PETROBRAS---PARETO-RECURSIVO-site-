@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 
@@ -106,7 +107,7 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -114,7 +115,7 @@ export const Modal: React.FC<ModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#04140D]/75 backdrop-blur-xs overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#04140D]/75 backdrop-blur-xs overflow-y-auto"
           onClick={closeOnBackdrop ? onClose : undefined}
         >
           <motion.div
@@ -128,7 +129,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className={`w-full ${WIDTH_CLASSES[maxWidth]} rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] outline-none ${
+            className={`my-auto w-full ${WIDTH_CLASSES[maxWidth]} rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] outline-none ${
               theme === 'dark'
                 ? 'bg-[#071F14] text-white border border-[#123826]'
                 : 'bg-white text-slate-900 border border-slate-200'
@@ -183,4 +184,10 @@ export const Modal: React.FC<ModalProps> = ({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(modalContent, document.body);
 };

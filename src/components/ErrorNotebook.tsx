@@ -74,14 +74,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-[#E6F4EC] border border-[#008542]/25',
       badgeText: 'text-[#006837]',
     },
-    subtopicosFrequentes: [
-      'Transmissores 4–20 mA (Zero Vivo) e 3–15 psi — Conversão linear por span',
-      'Malha Aberta vs Malha Fechada e Ações P, PI, PD e PID',
-      'Simbologia ISA-5.1 (PT, TIC, LIC, FV, PSV) e Terminologia',
-      'Metrologia — Exatidão vs Precisão, Range, Span e Histerese',
-      'Termopar (Seebeck) vs Termoresistência Pt100 e Medidores de Vazão',
-      'Válvulas de Controle (FO/FC) e Sistemas Instrumentados de Segurança (SIS)',
-    ],
+    subtopicosFrequentes: [],
   },
   {
     id: 'mecanica_fluidos',
@@ -95,14 +88,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-amber-50 border border-amber-300',
       badgeText: 'text-amber-900',
     },
-    subtopicosFrequentes: [
-      'Hidrostática (Stevin, Pascal) e Pressão Absoluta vs Manométrica',
-      'Bernoulli, Equação da Continuidade e Perda de Carga em Dutos',
-      'Bombas Centrífugas (Cavitação, NPSH, Escorva) vs Deslocamento Positivo',
-      'Válvulas Gaveta (Bloqueio), Globo (Regulagem) e Retenção',
-      'Termodinâmica (1ª e 2ª Leis) e Ciclo de Carnot em Kelvin',
-      'Permutadores Casco e Tubos (Contracorrente vs Cocorrente)',
-    ],
+    subtopicosFrequentes: [],
   },
   {
     id: 'quimica_processos',
@@ -116,14 +102,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-orange-50 border border-orange-200',
       badgeText: 'text-orange-900',
     },
-    subtopicosFrequentes: [
-      'Cálculo Estequiométrico — Balanceamento, Reagente Limitante e Rendimento',
-      'Estudo dos Gases — Clapeyron (PV = nRT) e Temperatura em Kelvin',
-      'Operações Unitárias — Destilação Fracionada, Absorção, Adsorção e Decantação',
-      'Processos de Refino — Destilação Atmosférica vs a Vácuo, FCC e HDT',
-      'SMS Operacional — NR-13, NR-20, NR-33, NR-35, PT, APR e FDS/FISPQ',
-      'Reações Redox (NOX), Corrosão e Hidrocarbonetos',
-    ],
+    subtopicosFrequentes: [],
   },
   {
     id: 'eletricidade',
@@ -137,13 +116,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-sky-50 border border-sky-200',
       badgeText: 'text-sky-900',
     },
-    subtopicosFrequentes: [
-      'Leis de Ohm, Associação Série/Paralelo e Potência Elétrica (Efeito Joule)',
-      'Eletromagnetismo — Lei de Faraday-Lenz e Transformadores em CA',
-      'Leis de Kirchhoff, Diodos Retificadores e Portas Lógicas Básicas',
-      'Eletrostática — Lei de Coulomb e Aterramento Contra Faíscas em Tanques',
-      'Radiações Eletromagnéticas — Espectro e Equação v = λ·f',
-    ],
+    subtopicosFrequentes: [],
   },
   {
     id: 'portugues',
@@ -157,12 +130,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-slate-100 border border-slate-200',
       badgeText: 'text-slate-800',
     },
-    subtopicosFrequentes: [
-      'Interpretação Textual, Tipologia e Inferência Cesgranrio',
-      'Crase, Regência Verbal/Nominal e Uso de Pronomes Relativos',
-      'Concordância Verbal e Nominal (Partícula SE e Sujeito Composto)',
-      'Pontuação e Valor Semântico das Conjunções (Coesão)',
-    ],
+    subtopicosFrequentes: [],
   },
   {
     id: 'matematica',
@@ -176,12 +144,7 @@ export const CORRELACOES_DISCIPLINAS: DisciplinaCorrelation[] = [
       badgeBg: 'bg-indigo-50 border border-indigo-200',
       badgeText: 'text-indigo-900',
     },
-    subtopicosFrequentes: [
-      'Porcentagem e Variações Percentuais Sucessivas',
-      'Regra de Três Simples e Composta (Grandezas Diretas e Inversas)',
-      'Unidades de Medida, Razão, Proporção e Escalas',
-      'Equações, Funções do 1º/2º Graus e Probabilidade Básica',
-    ],
+    subtopicosFrequentes: [],
   },
 ];
 
@@ -195,94 +158,15 @@ const LEGACY_SAMPLE_IDS = new Set([
   'err-3',
   'err-4',
   'err-5',
+  'err-tec-inst-1',
+  'err-tec-mec-1',
+  'err-tec-equip-1',
+  'err-tec-qui-1',
+  'err-tec-ref-1',
+  'err-tec-ele-1',
 ]);
 
-const INITIAL_SAMPLE_ERRORS: ErrorEntry[] = [
-  {
-    id: 'err-tec-inst-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Instrumentação, Metrologia & Controle',
-    origem: 'ambos',
-    subtopico: 'Transmissor 4–20 mA — Conversão por Span (16 mA)',
-    enunciadoResumido:
-      'Questão cobrava o valor de pressão correspondente a 12 mA em um transmissor calibrado na faixa de 0 a 200 kPa.',
-    motivoErro:
-      'Calculei 12 / 20 = 60% da faixa em vez de descontar o zero vivo de 4 mA e dividir pelo span de 16 mA.',
-    regraCorreta:
-      'Sinal 4–20 mA tem zero vivo em 4 mA e span = 20 − 4 = 16 mA. Percentual = (12 − 4) / 16 = 50% → 100 kPa.',
-    revisado: true,
-  },
-  {
-    id: 'err-tec-mec-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Mecânica, Fluidos, Termodinâmica & Equipamentos',
-    origem: 'ambos',
-    subtopico: 'Equação de Bernoulli — Estreitamento de Duto',
-    enunciadoResumido:
-      'Em um escoamento ideal horizontal por um tubo que sofre redução de diâmetro (Venturi), o que ocorre com velocidade e pressão estática?',
-    motivoErro:
-      'Supus que o aumento da velocidade na garganta elevava também a pressão estática do fluido.',
-    regraCorreta:
-      'Pela Continuidade (A1·v1 = A2·v2), menor área aumenta a velocidade. Por Bernoulli, onde a velocidade é maior, a pressão estática é MENOR.',
-    revisado: true,
-  },
-  {
-    id: 'err-tec-equip-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Mecânica, Fluidos, Termodinâmica & Equipamentos',
-    origem: 'ambos',
-    subtopico: 'Partida de Bombas — Centrífuga vs Deslocamento Positivo',
-    enunciadoResumido:
-      'Qual procedimento de segurança deve ser seguido na partida de uma bomba de deslocamento positivo em comparação à centrífuga?',
-    motivoErro:
-      'Marquei que toda bomba deve partir com a válvula de descarga fechada.',
-    regraCorreta:
-      'Bomba centrífuga pode partir com descarga fechada (menor potência no arranque); bomba de deslocamento positivo NUNCA pode operar com descarga bloqueada (sobrepressão/ruptura).',
-    revisado: false,
-  },
-  {
-    id: 'err-tec-qui-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Química, Operações Unitárias, Refino & SMS',
-    origem: 'ambos',
-    subtopico: 'Estudo dos Gases — Equação de Clapeyron (Temperatura em Kelvin)',
-    enunciadoResumido:
-      'Um cilindro de gás a 27 °C tem sua temperatura elevada para 327 °C a volume constante. Quantas vezes a pressão aumenta?',
-    motivoErro:
-      'Dividi 327 / 27 diretamente em °C em vez de converter para a escala absoluta Kelvin.',
-    regraCorreta:
-      'Converter sempre para Kelvin: T1 = 27 + 273 = 300 K; T2 = 327 + 273 = 600 K. Como P é proporcional a T em Kelvin, a pressão dobra (2×).',
-    revisado: true,
-  },
-  {
-    id: 'err-tec-ref-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Química, Operações Unitárias, Refino & SMS',
-    origem: 'transpetro',
-    subtopico: 'Refino — Destilação Atmosférica vs Destilação a Vácuo',
-    enunciadoResumido:
-      'Por que o resíduo atmosférico é enviado à torre de destilação a vácuo em vez de simplesmente elevar a temperatura acima de 400 °C?',
-    motivoErro:
-      'Achei que o vácuo servia apenas para acelerar o escoamento dentro da torre.',
-    regraCorreta:
-      'Reduzir a pressão diminui o ponto de ebulição das frações pesadas (gasóleos), evitando o craqueamento térmico indesejado e formação de coque.',
-    revisado: false,
-  },
-  {
-    id: 'err-tec-ele-1',
-    data: 'Exemplo Técnico',
-    disciplina: 'Eletricidade, Eletromagnetismo & Eletrônica',
-    origem: 'ambos',
-    subtopico: 'Eletromagnetismo — Funcionamento de Transformadores',
-    enunciadoResumido:
-      'Questão da banca afirmava em uma das alternativas que um transformador ideal eleva tensão contínua (CC) proporcionalmente à relação de espiras.',
-    motivoErro:
-      'Apliquei V1/V2 = N1/N2 sem verificar o regime da fonte de alimentação.',
-    regraCorreta:
-      'Pela Lei de Faraday-Lenz, a tensão induzida exige VARIAÇÃO de fluxo magnético. Transformadores operam apenas em corrente alternada (CA), não em CC constante.',
-    revisado: true,
-  },
-];
+const AREA_CUSTOM_STORAGE_KEY = 'transpetro_caderno_areas_custom_v1';
 
 const normalizeStr = (str: string) => {
   if (!str) return '';
@@ -302,23 +186,39 @@ const ORDERED_CORRELACOES_DISCIPLINAS = [...CORRELACOES_DISCIPLINAS].sort((a, b)
 export const ErrorNotebook: React.FC = () => {
   const [errors, setErrors] = useState<ErrorEntry[]>(() => {
     try {
-      const isCustomized = localStorage.getItem('transpetro_caderno_erros_customized') === 'true';
       const saved = localStorage.getItem(STORAGE_KEYS.ERROR_NOTEBOOK);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const allLegacySamples = parsed.every((e: any) => LEGACY_SAMPLE_IDS.has(e?.id));
-          if (!isCustomized && allLegacySamples) {
-            return INITIAL_SAMPLE_ERRORS;
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((e: any) => !LEGACY_SAMPLE_IDS.has(e?.id));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.ERROR_NOTEBOOK, JSON.stringify(cleaned));
           }
-          return parsed;
+          return cleaned;
         }
       }
     } catch (e) {
       console.error('Error loading error notebook from storage', e);
     }
-    return INITIAL_SAMPLE_ERRORS;
+    return [];
   });
+
+  const [customAreas, setCustomAreas] = useState<
+    Record<string, { nomeCurto: string; escopoInfo: string }>
+  >(() => {
+    try {
+      const saved = localStorage.getItem(AREA_CUSTOM_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [editingAreaCard, setEditingAreaCard] = useState<{
+    id: string;
+    nomeCurto: string;
+    escopoInfo: string;
+  } | null>(null);
 
   const [filterDisc, setFilterDisc] = useState<string>('todas');
   const [filterOrigin, setFilterOrigin] = useState<'todas' | OrigemEdital>('todas');
@@ -383,9 +283,10 @@ export const ErrorNotebook: React.FC = () => {
         const saved = localStorage.getItem(STORAGE_KEYS.ERROR_NOTEBOOK);
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            errorsRef.current = parsed;
-            setErrors(parsed);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((e: any) => !LEGACY_SAMPLE_IDS.has(e?.id));
+            errorsRef.current = cleaned;
+            setErrors(cleaned);
           }
         }
       } catch {
@@ -500,6 +401,65 @@ export const ErrorNotebook: React.FC = () => {
     setTimeout(() => setSaveToast(null), 3000);
   };
 
+  const persistCustomAreas = (
+    next: Record<string, { nomeCurto: string; escopoInfo: string }>
+  ) => {
+    setCustomAreas(next);
+    try {
+      localStorage.setItem(AREA_CUSTOM_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSaveAreaCardEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAreaCard) return;
+    const next = {
+      ...customAreas,
+      [editingAreaCard.id]: {
+        nomeCurto: editingAreaCard.nomeCurto.trim() || 'Área de Estudo',
+        escopoInfo: editingAreaCard.escopoInfo.trim(),
+      },
+    };
+    persistCustomAreas(next);
+    setEditingAreaCard(null);
+    setSaveToast('Card da área atualizado com sucesso!');
+    setTimeout(() => setSaveToast(null), 3000);
+  };
+
+  const handleDeleteAreaErrorsOrReset = (disc: DisciplinaCorrelation) => {
+    const areaCount = errorsRef.current.filter((e) =>
+      normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey))
+    ).length;
+
+    if (areaCount > 0) {
+      const remaining = errorsRef.current.filter(
+        (e) => !normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey))
+      );
+      saveErrorsImmediately(remaining);
+      setSaveToast(
+        `${areaCount} ${areaCount === 1 ? 'erro removido' : 'erros removidos'} de ${
+          customAreas[disc.id]?.nomeCurto || disc.nomeCurto
+        }.`
+      );
+      setTimeout(() => setSaveToast(null), 3500);
+      return;
+    }
+
+    if (customAreas[disc.id]) {
+      const next = { ...customAreas };
+      delete next[disc.id];
+      persistCustomAreas(next);
+      setSaveToast('Configuração padrão do card restaurada.');
+      setTimeout(() => setSaveToast(null), 3000);
+      return;
+    }
+
+    setSaveToast('Nenhum erro cadastrado neste card para remover.');
+    setTimeout(() => setSaveToast(null), 2500);
+  };
+
   const handleExportCSV = () => {
     const headers = [
       'Data',
@@ -569,13 +529,6 @@ export const ErrorNotebook: React.FC = () => {
     if (norm.includes('matemat')) return { bg: 'bg-indigo-50 text-indigo-900 border-indigo-200' };
     return { bg: 'bg-slate-100 text-slate-800 border-slate-200' };
   };
-
-  const currentFormCorrelations =
-    CORRELACOES_DISCIPLINAS.find(
-      (c) =>
-        normalizeStr(c.nome) === normalizeStr(formData.disciplina) ||
-        normalizeStr(formData.disciplina).includes(normalizeStr(c.filtroKey))
-    )?.subtopicosFrequentes || [];
 
   const especStatus =
     mediaEspecificos >= 80
@@ -662,15 +615,15 @@ export const ErrorNotebook: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {ORDERED_CORRELACOES_DISCIPLINAS.map((disc) => {
-            const countErros = errors.filter((e) =>
+            const areaErrors = errors.filter((e) =>
               normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey))
-            ).length;
-            const countRevisados = errors.filter(
-              (e) =>
-                normalizeStr(e.disciplina).includes(normalizeStr(disc.filtroKey)) && e.revisado
-            ).length;
+            );
+            const countErros = areaErrors.length;
+            const countRevisados = areaErrors.filter((e) => e.revisado).length;
             const isAtivo = normalizeStr(filterDisc).includes(normalizeStr(disc.filtroKey));
             const discSubject = classifyMacroArea(disc.id);
+            const displayNomeCurto = customAreas[disc.id]?.nomeCurto || disc.nomeCurto;
+            const displayEscopo = customAreas[disc.id]?.escopoInfo ?? disc.escopoInfo;
 
             return (
               <Card
@@ -692,34 +645,85 @@ export const ErrorNotebook: React.FC = () => {
                         {disc.categoria.includes('Específicos') ? 'Específico' : 'Geral'}
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono tabular-nums font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                      {countErros} {countErros === 1 ? 'erro' : 'erros'} ({countRevisados} rev.)
-                    </span>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] font-mono tabular-nums font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                        {countErros} {countErros === 1 ? 'erro' : 'erros'} ({countRevisados} rev.)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingAreaCard({
+                            id: disc.id,
+                            nomeCurto: displayNomeCurto,
+                            escopoInfo: displayEscopo,
+                          })
+                        }
+                        title={`Editar card ${displayNomeCurto}`}
+                        aria-label={`Editar card ${displayNomeCurto}`}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-[#008542] hover:bg-[#E6F4EC] transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAreaErrorsOrReset(disc)}
+                        title={
+                          countErros > 0
+                            ? `Excluir erros de ${displayNomeCurto}`
+                            : `Limpar personalização de ${displayNomeCurto}`
+                        }
+                        aria-label={`Excluir registros de ${displayNomeCurto}`}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
 
                   <h4 className="text-sm sm:text-base font-display font-extrabold text-slate-900 mb-1">
-                    {disc.nomeCurto}
+                    {displayNomeCurto}
                   </h4>
-                  <p className="text-xs text-slate-500 mb-3 font-medium">{disc.escopoInfo}</p>
+                  <p className="text-xs text-slate-500 mb-3 font-medium">{displayEscopo}</p>
 
-                  <div className="mb-4">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5 font-mono">
-                      Correlações Frequentes:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {disc.subtopicosFrequentes.slice(0, 3).map((sub, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleOpenAddForDiscipline(disc.nome, sub)}
-                          className="text-[11px] text-left px-2 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md border border-slate-200/80 transition-colors cursor-pointer truncate max-w-full"
-                          title={`Adicionar erro em: ${sub}`}
+                  {areaErrors.length > 0 ? (
+                    <div className="mb-4 space-y-1.5">
+                      {areaErrors.slice(0, 3).map((err) => (
+                        <div
+                          key={err.id}
+                          className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px]"
                         >
-                          + {sub.split('—')[0].trim()}
-                        </button>
+                          <span className="font-medium text-slate-800 truncate">
+                            {err.subtopico}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingError(err)}
+                              title={`Editar erro: ${err.subtopico}`}
+                              aria-label={`Editar erro ${err.subtopico}`}
+                              className="p-1 rounded text-slate-500 hover:text-[#008542] hover:bg-white transition-colors cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteError(err.id)}
+                              title={`Excluir erro: ${err.subtopico}`}
+                              aria-label={`Excluir erro ${err.subtopico}`}
+                              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="mb-4 py-2 px-3 rounded-lg bg-slate-50/70 border border-dashed border-slate-200 text-[11px] text-slate-400">
+                      Nenhum erro registrado nesta área.
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
@@ -736,7 +740,7 @@ export const ErrorNotebook: React.FC = () => {
                     size="sm"
                     leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}
                     onClick={() => handleOpenAddForDiscipline(disc.nome)}
-                    title={`Adicionar erro no caderno de ${disc.nomeCurto}`}
+                    title={`Adicionar erro no caderno de ${displayNomeCurto}`}
                   >
                     Anotar Erro
                   </Button>
@@ -1126,7 +1130,7 @@ export const ErrorNotebook: React.FC = () => {
         }}
         title="Novo Registro no Caderno de Erros"
         subtitle="Documente a causa raiz, origem no edital e regra definitiva"
-        icon={<BookOpen className="w-5 h-5" aria-hidden="true" />}
+        icon={<Edit className="w-5 h-5" aria-hidden="true" />}
         maxWidth="xl"
       >
         <div className="p-5 sm:p-6">
@@ -1183,14 +1187,9 @@ export const ErrorNotebook: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="add-err-subtopico" className="block font-bold text-slate-700">
-                  Subtópico Exato / Correlação:
-                </label>
-                <span className="text-[10px] text-slate-400">
-                  Sugestões frequentes abaixo
-                </span>
-              </div>
+              <label htmlFor="add-err-subtopico" className="block font-bold text-slate-700 mb-1">
+                Subtópico Exato / Correlação:
+              </label>
               <input
                 id="add-err-subtopico"
                 type="text"
@@ -1201,26 +1200,8 @@ export const ErrorNotebook: React.FC = () => {
                   setFormData({ ...formData, subtopico: e.target.value });
                   if (formError) setFormError(null);
                 }}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542] mb-1.5"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542]"
               />
-
-              {currentFormCorrelations.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {currentFormCorrelations.slice(0, 4).map((top, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, subtopico: top });
-                        if (formError) setFormError(null);
-                      }}
-                      className="text-[11px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md cursor-pointer border border-slate-200/80"
-                    >
-                      {top.split('—')[0].trim()}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div>
@@ -1269,43 +1250,64 @@ export const ErrorNotebook: React.FC = () => {
               />
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100">
               <Button
                 variant="outline"
                 size="md"
+                leftIcon={<Trash2 className="w-4 h-4 text-rose-600" aria-hidden="true" />}
                 onClick={() => {
-                  setShowAddModal(false);
+                  setFormData({
+                    ...formData,
+                    subtopico: '',
+                    enunciadoResumido: '',
+                    motivoErro: '',
+                    regraCorreta: '',
+                  });
                   setFormError(null);
                 }}
+                title="Limpar os campos preenchidos"
               >
-                Cancelar
+                Limpar Campos
               </Button>
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon={<Download className="w-4 h-4 text-sky-600" aria-hidden="true" />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAddError(e, true);
-                }}
-                title="Salva o registro e baixa o arquivo completo Petrobras_Enfase_Operacao_Jr.json"
-              >
-                Salvar e Baixar Backup
-              </Button>
-              <Button
-                id="btn-confirm-save-error"
-                variant="primary"
-                size="md"
-                leftIcon={<Save className="w-4 h-4" aria-hidden="true" />}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAddError(e, false);
-                }}
-              >
-                Salvar Registro
-              </Button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setFormError(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="md"
+                  leftIcon={<Download className="w-4 h-4 text-sky-600" aria-hidden="true" />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAddError(e, true);
+                  }}
+                  title="Salva o registro e baixa o arquivo completo Petrobras_Enfase_Operacao_Jr.json"
+                >
+                  Salvar e Baixar Backup
+                </Button>
+                <Button
+                  id="btn-confirm-save-error"
+                  variant="primary"
+                  size="md"
+                  leftIcon={<Save className="w-4 h-4" aria-hidden="true" />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAddError(e, false);
+                  }}
+                >
+                  Salvar Registro
+                </Button>
+              </div>
             </div>
           </form>
         </div>
@@ -1435,9 +1437,24 @@ export const ErrorNotebook: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-100">
-                <Button variant="outline" size="md" onClick={() => setEditingError(null)}>
-                  Cancelar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="md" onClick={() => setEditingError(null)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={<Trash2 className="w-4 h-4 text-rose-600" aria-hidden="true" />}
+                    onClick={() => {
+                      handleDeleteError(editingError.id);
+                      setEditingError(null);
+                    }}
+                    className="text-rose-700 border-rose-200 hover:bg-rose-50"
+                    title="Excluir este registro de erro"
+                  >
+                    Excluir
+                  </Button>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
@@ -1469,6 +1486,82 @@ export const ErrorNotebook: React.FC = () => {
               </div>
             </form>
           </div>
+        )}
+      </Modal>
+
+      {/* Edit Area Card Modal */}
+      <Modal
+        isOpen={Boolean(editingAreaCard)}
+        onClose={() => setEditingAreaCard(null)}
+        title="Editar Card da Área"
+        subtitle="Personalize o título e a descrição exibidos no card"
+        icon={<Edit className="w-5 h-5" aria-hidden="true" />}
+        maxWidth="md"
+      >
+        {editingAreaCard && (
+          <form onSubmit={handleSaveAreaCardEdit} className="p-5 sm:p-6 space-y-4 text-xs">
+            <div>
+              <label htmlFor="edit-area-nome" className="block font-bold text-slate-700 mb-1">
+                Nome do Card:
+              </label>
+              <input
+                id="edit-area-nome"
+                type="text"
+                required
+                value={editingAreaCard.nomeCurto}
+                onChange={(e) =>
+                  setEditingAreaCard({ ...editingAreaCard, nomeCurto: e.target.value })
+                }
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-area-escopo" className="block font-bold text-slate-700 mb-1">
+                Descrição / Escopo:
+              </label>
+              <input
+                id="edit-area-escopo"
+                type="text"
+                value={editingAreaCard.escopoInfo}
+                onChange={(e) =>
+                  setEditingAreaCard({ ...editingAreaCard, escopoInfo: e.target.value })
+                }
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#008542]/20 focus:border-[#008542]"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Trash2 className="w-3.5 h-3.5 text-rose-600" aria-hidden="true" />}
+                onClick={() => {
+                  const next = { ...customAreas };
+                  delete next[editingAreaCard.id];
+                  persistCustomAreas(next);
+                  setEditingAreaCard(null);
+                  setSaveToast('Card restaurado para o texto padrão.');
+                  setTimeout(() => setSaveToast(null), 3000);
+                }}
+              >
+                Restaurar Padrão
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingAreaCard(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Save className="w-3.5 h-3.5" aria-hidden="true" />}
+                >
+                  Salvar Card
+                </Button>
+              </div>
+            </div>
+          </form>
         )}
       </Modal>
     </div>
