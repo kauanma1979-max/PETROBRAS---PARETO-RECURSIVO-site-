@@ -18,6 +18,7 @@ import {
 
 export const STORAGE_KEY_DRIVE_ENDPOINT = 'google_drive_sync_endpoint_v1';
 export const STORAGE_KEY_DRIVE_AUTO_SYNC = 'google_drive_auto_sync_v1';
+export const STORAGE_KEY_DRIVE_AUTO_PUSH = 'google_drive_auto_push_v1';
 export const STORAGE_KEY_DRIVE_VALIDATED = 'google_drive_sync_validated_v1';
 export const STORAGE_KEY_DRIVE_LAST_SYNC = 'google_drive_last_sync_date_v1';
 export const STORAGE_KEY_DRIVE_SAFETY_BACKUP = 'transpetro_pre_drive_sync_safety_backup_v1';
@@ -88,6 +89,22 @@ export function setDriveAutoSync(enabled: boolean): void {
     localStorage.setItem(STORAGE_KEY_DRIVE_AUTO_SYNC, enabled ? 'true' : 'false');
   } catch (err) {
     console.error('Error saving auto-sync preference', err);
+  }
+}
+
+export function getDriveAutoPush(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_DRIVE_AUTO_PUSH) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setDriveAutoPush(enabled: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DRIVE_AUTO_PUSH, enabled ? 'true' : 'false');
+  } catch (err) {
+    console.error('Error saving auto-push preference', err);
   }
 }
 
@@ -469,6 +486,81 @@ export function fetchGoogleDriveDataViaJsonp(
 
     document.head.appendChild(script);
   });
+}
+
+export function buildDevicePairingLink(baseUrl: string, endpoint: string): string {
+  const cleanBase = (baseUrl || '').trim().replace(/\/+$/, '');
+  const normalizedEndpoint = normalizeAppsScriptUrl(endpoint);
+  if (!cleanBase || !normalizedEndpoint) return '';
+  return `${cleanBase}?driveEndpoint=${encodeURIComponent(normalizedEndpoint)}`;
+}
+
+export async function pushBackupToGoogleDrive(
+  endpoint: string,
+  onStatusChange?: (statusText: string) => void
+): Promise<{ success: boolean; message: string }> {
+  const normalized = normalizeAppsScriptUrl(endpoint);
+  if (!normalized || !normalized.startsWith('https://script.google.com/')) {
+    const errMsg = 'Configure a URL do Apps Script (deve iniciar com https://script.google.com/).';
+    onStatusChange?.(errMsg);
+    throw new Error(errMsg);
+  }
+
+  if (normalized !== endpoint) {
+    setDriveEndpoint(normalized);
+  }
+
+  onStatusChange?.('Enviando dados locais para o Google Drive...');
+  const payload = generateBackupPayload();
+
+  const response = await fetch(normalized, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao enviar dados (${response.status}). Confira a implantação do Apps Script.`);
+  }
+
+  let message = `Arquivo "${GOOGLE_DRIVE_FILE_NAME}" salvo com sucesso no Google Drive!`;
+  try {
+    const data = await response.json();
+    if (data && data.success === false) {
+      throw new Error(data.error || 'Erro ao gravar arquivo no Google Drive.');
+    }
+    if (data?.message) {
+      message = data.message;
+    }
+  } catch (err: any) {
+    if (err?.message && err.name !== 'SyntaxError') {
+      throw err;
+    }
+  }
+
+  setDriveSyncValidated(true);
+  setLastDriveSyncDate(new Date().toLocaleString('pt-BR'));
+  onStatusChange?.(message);
+  return { success: true, message };
+}
+
+export async function syncBidirectionalWithGoogleDrive(
+  endpoint: string,
+  onStatusChange?: (statusText: string) => void
+): Promise<void> {
+  try {
+    await fetchGoogleDriveDataViaJsonp(endpoint, onStatusChange);
+  } catch (err: any) {
+    const msg = String(err?.message || '');
+    if (!msg.includes('não foi encontrado') && !msg.includes('Nenhum arquivo')) {
+      throw err;
+    }
+    onStatusChange?.('Nenhum backup prévio no Drive. Criando backup inicial...');
+  }
+
+  await pushBackupToGoogleDrive(endpoint, onStatusChange);
 }
 
 /**

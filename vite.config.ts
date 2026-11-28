@@ -20,10 +20,10 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'Transpetro & Petrobras — Pareto & DNA Cesgranrio',
+          name: 'Transpetro & Petrobras — Pareto & Raio-X Cesgranrio',
           short_name: 'PetroPareto',
           description:
-            'Plataforma de estudos Petrobras e Transpetro com Matriz Pareto, Edital Verticalizado, Cronograma 2027 e DNA Cesgranrio.',
+            'Plataforma de estudos Petrobras e Transpetro com Matriz Pareto, Edital Verticalizado, Cronograma 2027 e Raio-X Cesgranrio.',
           theme_color: '#071F14',
           background_color: '#071F14',
           display: 'standalone',
