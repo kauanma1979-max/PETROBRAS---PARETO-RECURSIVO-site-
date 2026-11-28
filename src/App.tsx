@@ -19,21 +19,13 @@ import { SYLLABUS_COUNTS } from './data/verticalSyllabusData';
 import {
   getDriveEndpoint,
   getDriveAutoSync,
-  getDriveAutoPush,
   getDriveSyncValidated,
-  setDriveEndpoint,
-  setDriveAutoSync,
-  setDriveAutoPush,
   fetchGoogleDriveDataViaJsonp,
-  pushBackupToGoogleDrive,
-  extractDriveSyncEndpointFromLocation,
   mergeTranspetroBackupData,
   savePreSyncSafetyBackup,
   setDriveSyncValidated,
   setLastDriveSyncDate
 } from './utils/driveSync';
-import { OfflineIndicator } from './components/OfflineIndicator';
-import { ToastBanner } from './components/ui/ToastBanner';
 import { generateBackupPayload, restoreFromRawData } from './utils/backupStorage';
 import {
   FOCUS_STORAGE_KEYS,
@@ -53,7 +45,6 @@ import {
   type ResolvedStudyResume,
   type TimerLaunchTarget,
 } from './utils/studyResume';
-import type { CesgranrioAiLaunchRequest } from './data/cesgranrioDna';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -110,14 +101,6 @@ export default function App() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [backupModalTab, setBackupModalTab] = useState<'drive' | 'file' | 'code'>('drive');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
-  const [cesgranrioLaunchRequest, setCesgranrioLaunchRequest] =
-    useState<CesgranrioAiLaunchRequest | null>(null);
-  const [globalToast, setGlobalToast] = useState<string | null>(null);
-
-  const handleLaunchCesgranrioAi = (req: CesgranrioAiLaunchRequest) => {
-    setCesgranrioLaunchRequest(req);
-    handleTabChange('banca');
-  };
 
   const handleSelectCalendarDate = (dateKey: string) => {
     setSelectedCalendarDate(dateKey);
@@ -210,26 +193,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const pairedEndpoint = extractDriveSyncEndpointFromLocation();
-    if (pairedEndpoint) {
-      setDriveEndpoint(pairedEndpoint);
-      setDriveAutoSync(true);
-      setDriveAutoPush(true);
-      setDriveSyncValidated(true);
-      setGlobalToast('Conectando este dispositivo ao seu Google Drive...');
-      fetchGoogleDriveDataViaJsonp(pairedEndpoint)
-        .then(() => {
-          setGlobalToast('Dispositivo conectado e sincronizado com seu Google Drive!');
-          setTimeout(() => setGlobalToast(null), 5000);
-        })
-        .catch((err) => {
-          console.warn('Device pairing sync notice:', err?.message);
-          setGlobalToast('Link do Drive salvo neste aparelho! Confira a aba Drive se precisar revalidar.');
-          setTimeout(() => setGlobalToast(null), 6000);
-        });
-      return;
-    }
-
     const isAutoSync = getDriveAutoSync();
     const isValidated = getDriveSyncValidated();
     const endpoint = getDriveEndpoint();
@@ -242,35 +205,6 @@ export default function App() {
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, []);
-
-  // Debounced auto-push to Google Drive when local study data changes
-  useEffect(() => {
-    let pushTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleAutoPush = () => {
-      const autoPush = getDriveAutoPush();
-      const validated = getDriveSyncValidated();
-      const endpoint = getDriveEndpoint();
-      if (!autoPush || !validated || !endpoint || !endpoint.startsWith('https://script.google.com/')) {
-        return;
-      }
-      if (pushTimer) clearTimeout(pushTimer);
-      pushTimer = setTimeout(() => {
-        pushBackupToGoogleDrive(endpoint).catch((err) => {
-          console.warn('Auto-push Drive notice:', err?.message);
-        });
-      }, 5000);
-    };
-
-    window.addEventListener('transpetro_storage_changed', scheduleAutoPush);
-    window.addEventListener('transpetro_focus_updated', scheduleAutoPush);
-    window.addEventListener('transpetro_cesgranrio_memory_updated', scheduleAutoPush);
-    return () => {
-      if (pushTimer) clearTimeout(pushTimer);
-      window.removeEventListener('transpetro_storage_changed', scheduleAutoPush);
-      window.removeEventListener('transpetro_focus_updated', scheduleAutoPush);
-      window.removeEventListener('transpetro_cesgranrio_memory_updated', scheduleAutoPush);
-    };
   }, []);
 
   const confirmResetProgress = () => {
@@ -356,7 +290,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-verticalizado"
             className={activeTab === 'verticalizado' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <EditalVerticalizado onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
+            <EditalVerticalizado />
           </div>
 
           <div
@@ -364,7 +298,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-pareto"
             className={activeTab === 'pareto' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <ParetoMatrix onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
+            <ParetoMatrix />
           </div>
 
           <div
@@ -372,10 +306,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-material"
             className={activeTab === 'material' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <TabMaterialEstudo
-              onOpenCalculator={handleOpenCalculator}
-              onLaunchCesgranrioAi={handleLaunchCesgranrioAi}
-            />
+            <TabMaterialEstudo onOpenCalculator={handleOpenCalculator} />
           </div>
 
           <div
@@ -403,7 +334,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-banca"
             className={activeTab === 'banca' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <BancaCesgranrio launchRequest={cesgranrioLaunchRequest} />
+            <BancaCesgranrio />
           </div>
 
           <div
@@ -411,7 +342,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             aria-labelledby="body-tab-nav-caderno"
             className={activeTab === 'caderno' ? 'block animate-tabEnter' : 'hidden'}
           >
-            <ErrorNotebook onLaunchCesgranrioAi={handleLaunchCesgranrioAi} />
+            <ErrorNotebook />
           </div>
         </main>
 
@@ -474,17 +405,6 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
             </div>
           </div>
         </footer>
-
-        {globalToast && (
-          <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-            <ToastBanner
-              message={globalToast}
-              tone="success"
-              onDismiss={() => setGlobalToast(null)}
-            />
-          </div>
-        )}
-        <OfflineIndicator />
       </div>
     </MotionConfig>
   );

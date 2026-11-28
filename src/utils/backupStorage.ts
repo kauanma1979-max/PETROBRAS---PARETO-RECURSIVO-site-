@@ -11,12 +11,6 @@ import {
   type PomodoroActiveState,
   type StudyResumeState,
 } from './studyFocusStorage';
-import {
-  CESGRANRIO_MEMORY_STORAGE_KEY,
-  dispatchCesgranrioMemoryUpdated,
-  sanitizeCesgranrioMemory,
-  type CesgranrioPedagogicalMemory,
-} from './cesgranrioMemory';
 
 export interface BackupDataPayload {
   version: string;
@@ -36,7 +30,6 @@ export interface BackupDataPayload {
     pomodoroActiveState?: PomodoroActiveState | null;
     studyResumeState?: StudyResumeState | null;
     calendarSelectedDate?: string;
-    cesgranrioPedagogicalMemory?: CesgranrioPedagogicalMemory;
     otherStorageKeys?: Record<string, any>;
   };
 }
@@ -66,7 +59,6 @@ export const STORAGE_KEYS = {
   POMODORO_ACTIVE_STATE: FOCUS_STORAGE_KEYS.ACTIVE_STATE,
   STUDY_RESUME_STATE: FOCUS_STORAGE_KEYS.RESUME_STATE,
   CALENDAR_SELECTED_DATE: FOCUS_STORAGE_KEYS.SELECTED_DATE,
-  CESGRANRIO_MEMORY: CESGRANRIO_MEMORY_STORAGE_KEY,
 };
 
 export const notifyDataUpdated = (sourceKey?: string) => {
@@ -227,15 +219,6 @@ export const generateBackupPayload = (): BackupDataPayload => {
     if (rawSelectedDate) payload.data.calendarSelectedDate = rawSelectedDate;
   } catch (e) { /* ignore */ }
 
-  try {
-    const rawCesgranrioMemory = localStorage.getItem(STORAGE_KEYS.CESGRANRIO_MEMORY);
-    if (rawCesgranrioMemory) {
-      payload.data.cesgranrioPedagogicalMemory = sanitizeCesgranrioMemory(
-        JSON.parse(rawCesgranrioMemory)
-      );
-    }
-  } catch (e) { /* ignore */ }
-
   // Grab any additional transpetro keys if existing
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -377,11 +360,6 @@ export const restoreFromRawData = (dataObj: any): { success: boolean; message: s
       localStorage.setItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE, payload.calendarSelectedDate.trim());
     }
 
-    if (payload.cesgranrioPedagogicalMemory && typeof payload.cesgranrioPedagogicalMemory === 'object') {
-      const cleanMemory = sanitizeCesgranrioMemory(payload.cesgranrioPedagogicalMemory);
-      localStorage.setItem(STORAGE_KEYS.CESGRANRIO_MEMORY, JSON.stringify(cleanMemory));
-    }
-
     if (payload.otherStorageKeys && typeof payload.otherStorageKeys === 'object') {
       Object.entries(payload.otherStorageKeys).forEach(([k, v]) => {
         if (typeof v === 'string') {
@@ -394,7 +372,6 @@ export const restoreFromRawData = (dataObj: any): { success: boolean; message: s
 
     notifyDataUpdated();
     dispatchFocusUpdated();
-    dispatchCesgranrioMemoryUpdated();
 
     const stats = getBackupStats();
     return {

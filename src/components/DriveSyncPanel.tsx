@@ -11,27 +11,18 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  ShieldCheck,
-  UploadCloud,
-  Smartphone,
-  Link as LinkIcon,
-  ArrowLeftRight
+  ShieldCheck
 } from 'lucide-react';
 import {
   getDriveEndpoint,
   setDriveEndpoint,
   getDriveAutoSync,
   setDriveAutoSync,
-  getDriveAutoPush,
-  setDriveAutoPush,
   getDriveSyncValidated,
   getLastDriveSyncDate,
   getPreSyncSafetyBackup,
   restorePreSyncSafetyBackup,
   fetchGoogleDriveDataViaJsonp,
-  pushBackupToGoogleDrive,
-  syncBidirectionalWithGoogleDrive,
-  buildDevicePairingLink,
   getGoogleAppsScriptTemplate,
   normalizeAppsScriptUrl,
   GOOGLE_DRIVE_FILE_NAME
@@ -49,7 +40,6 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
 }) => {
   const [endpoint, setEndpoint] = useState<string>(getDriveEndpoint());
   const [autoSync, setAutoSync] = useState<boolean>(getDriveAutoSync());
-  const [autoPush, setAutoPush] = useState<boolean>(getDriveAutoPush());
   const [isValidated, setIsValidated] = useState<boolean>(getDriveSyncValidated());
   const [lastSync, setLastSync] = useState<string | null>(getLastDriveSyncDate());
   const [statusText, setStatusText] = useState<string>('Pronto para sincronizar');
@@ -57,10 +47,6 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showScriptCode, setShowScriptCode] = useState<boolean>(false);
   const [codeCopied, setCodeCopied] = useState<boolean>(false);
-  const [pairingCopied, setPairingCopied] = useState<boolean>(false);
-  const [shareAppUrl, setShareAppUrl] = useState<string>(() =>
-    typeof window !== 'undefined' ? window.location.origin : ''
-  );
   const [hasSafetyBackup, setHasSafetyBackup] = useState<boolean>(Boolean(getPreSyncSafetyBackup()));
   const [urlFixedNotice, setUrlFixedNotice] = useState<boolean>(false);
   const [showUndoConfirm, setShowUndoConfirm] = useState<boolean>(false);
@@ -68,7 +54,6 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
   useEffect(() => {
     setEndpoint(getDriveEndpoint());
     setAutoSync(getDriveAutoSync());
-    setAutoPush(getDriveAutoPush());
     setIsValidated(getDriveSyncValidated());
     setLastSync(getLastDriveSyncDate());
     setHasSafetyBackup(Boolean(getPreSyncSafetyBackup()));
@@ -106,18 +91,14 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
     setDriveAutoSync(checked);
   };
 
-  const handleAutoPushToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
-    setAutoPush(checked);
-    setDriveAutoPush(checked);
-  };
+  const executarSincronizacao = async () => {
+    if (isLoading) return;
 
-  const resolveValidTargetUrl = (): string | null => {
     let targetUrl = endpoint.trim();
     if (!targetUrl) {
-      setStatusText('Cole a URL do Google Apps Script antes de sincronizar.');
+      setStatusText('Cole a URL do Google Apps Script antes de atualizar.');
       setStatusType('error');
-      return null;
+      return;
     }
 
     const normalized = normalizeAppsScriptUrl(targetUrl);
@@ -131,15 +112,8 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
     if (!targetUrl.startsWith('https://script.google.com/')) {
       setStatusText('A URL deve iniciar com https://script.google.com/...');
       setStatusType('error');
-      return null;
+      return;
     }
-    return targetUrl;
-  };
-
-  const executarSincronizacao = async () => {
-    if (isLoading) return;
-    const targetUrl = resolveValidTargetUrl();
-    if (!targetUrl) return;
 
     setIsLoading(true);
     setStatusType('loading');
@@ -164,84 +138,6 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
       setStatusText(err?.message || 'Falha no acesso. Confira a URL e as permissões.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const executarEnvioDrive = async () => {
-    if (isLoading) return;
-    const targetUrl = resolveValidTargetUrl();
-    if (!targetUrl) return;
-
-    setIsLoading(true);
-    setStatusType('loading');
-    setStatusText('Enviando dados locais para o Google Drive...');
-
-    try {
-      const res = await pushBackupToGoogleDrive(targetUrl, (msg) => setStatusText(msg));
-      setStatusType('success');
-      setStatusText(res.message);
-      setIsValidated(true);
-      setLastSync(new Date().toLocaleString('pt-BR'));
-      setUrlFixedNotice(false);
-    } catch (err: any) {
-      setStatusType('error');
-      setStatusText(err?.message || 'Erro ao enviar dados para o Google Drive.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const executarSincronizacaoBidirecional = async () => {
-    if (isLoading) return;
-    const targetUrl = resolveValidTargetUrl();
-    if (!targetUrl) return;
-
-    setIsLoading(true);
-    setStatusType('loading');
-    setStatusText('Sincronizando (baixando e enviando) com o Google Drive...');
-
-    try {
-      await syncBidirectionalWithGoogleDrive(targetUrl, (msg) => setStatusText(msg));
-      setStatusType('success');
-      setStatusText('Tudo sincronizado! Seus computadores e celulares estão alinhados.');
-      setIsValidated(true);
-      setLastSync(new Date().toLocaleString('pt-BR'));
-      setHasSafetyBackup(Boolean(getPreSyncSafetyBackup()));
-      setUrlFixedNotice(false);
-      if (onSyncSuccess) onSyncSuccess();
-    } catch (err: any) {
-      setStatusType('error');
-      setStatusText(err?.message || 'Falha ao sincronizar com o Google Drive.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const validPairingEndpoint =
-    trimmedUrl.startsWith('https://script.google.com/') && !isInvalidUrlFormat;
-  const pairingLink = validPairingEndpoint
-    ? buildDevicePairingLink(shareAppUrl || (typeof window !== 'undefined' ? window.location.origin : ''), trimmedUrl)
-    : '';
-
-  const handleCopyPairingLink = async () => {
-    if (!pairingLink) return;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(pairingLink);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = pairingLink;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      setPairingCopied(true);
-      setTimeout(() => setPairingCopied(false), 3000);
-    } catch {
-      // ignore
     }
   };
 
@@ -357,42 +253,20 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
         )}
       </div>
 
-      {/* Preserved Drive Sync Button & Two-Way Actions */}
-      <div id="drive-sync" className="space-y-2.5 py-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={executarSincronizacaoBidirecional}
-            disabled={isLoading}
-            className="h-10 px-4 rounded-xl bg-[#071F14] hover:bg-[#0D3321] disabled:bg-slate-400 text-[#FDB913] font-semibold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed whitespace-nowrap shrink-0"
-          >
-            <ArrowLeftRight className="w-4 h-4" aria-hidden="true" />
-            <span>Sincronizar Tudo (Enviar + Baixar)</span>
-          </button>
+      {/* Preserved Drive Sync Button & Status Contract */}
+      <div id="drive-sync" className="flex flex-wrap items-center gap-3 py-1">
+        <button
+          id="drive-sync-btn"
+          type="button"
+          onClick={executarSincronizacao}
+          disabled={isLoading}
+          className="h-10 px-4 rounded-xl bg-[#008542] hover:bg-[#006837] disabled:bg-slate-400 text-white font-semibold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+        >
+          {isLoading && <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" />}
+          <span>Atualizar dados do Google Drive</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={executarEnvioDrive}
-            disabled={isLoading}
-            className="h-10 px-3.5 rounded-xl bg-[#008542] hover:bg-[#006837] disabled:bg-slate-400 text-white font-semibold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed whitespace-nowrap shrink-0"
-          >
-            <UploadCloud className="w-4 h-4" aria-hidden="true" />
-            <span>Salvar no Google Drive</span>
-          </button>
-
-          <button
-            id="drive-sync-btn"
-            type="button"
-            onClick={executarSincronizacao}
-            disabled={isLoading}
-            className="h-10 px-3.5 rounded-xl bg-white hover:bg-[#F6F8F7] disabled:bg-slate-100 text-slate-800 border border-slate-300 font-semibold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed whitespace-nowrap shrink-0"
-          >
-            {isLoading && <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" />}
-            <span>Atualizar dados do Google Drive</span>
-          </button>
-        </div>
-
-        <div
+        <span
           id="drive-sync-status"
           role="status"
           className={`text-xs font-medium ${
@@ -404,7 +278,7 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
           }`}
         >
           {statusText}
-        </div>
+        </span>
       </div>
 
       {/* Troubleshooting panel on error */}
@@ -464,44 +338,27 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
       )}
 
       {/* Advanced Options & Safety */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
-        <div className="space-y-2">
-          <label
-            className={`flex items-center gap-2 select-none font-medium ${
-              !isValidated ? 'opacity-60 cursor-not-allowed text-slate-500' : 'text-slate-700 hover:text-slate-900 cursor-pointer'
-            }`}
-            title={!isValidated ? 'Sincronize pelo menos uma vez com sucesso para habilitar atualização automática' : ''}
-          >
-            <input
-              type="checkbox"
-              checked={autoSync}
-              onChange={handleAutoSyncToggle}
-              disabled={!isValidated}
-              className="w-4 h-4 rounded-sm accent-[#008542] cursor-pointer disabled:cursor-not-allowed"
-            />
-            <span>Baixar dados automaticamente ao abrir em cada aparelho</span>
-            {!isValidated && (
-              <span className="text-[11px] text-orange-800 bg-orange-50 px-2 py-0.5 rounded font-semibold">
-                Requer validação prévia
-              </span>
-            )}
-          </label>
-
-          <label
-            className={`flex items-center gap-2 select-none font-medium ${
-              !isValidated ? 'opacity-60 cursor-not-allowed text-slate-500' : 'text-slate-700 hover:text-slate-900 cursor-pointer'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={autoPush}
-              onChange={handleAutoPushToggle}
-              disabled={!isValidated}
-              className="w-4 h-4 rounded-sm accent-[#008542] cursor-pointer disabled:cursor-not-allowed"
-            />
-            <span>Enviar alterações automaticamente para o Google Drive (recomendado para usar vários PCs/celulares)</span>
-          </label>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+        <label
+          className={`flex items-center gap-2 select-none font-medium ${
+            !isValidated ? 'opacity-60 cursor-not-allowed text-slate-500' : 'text-slate-700 hover:text-slate-900 cursor-pointer'
+          }`}
+          title={!isValidated ? 'Sincronize pelo menos uma vez com sucesso para habilitar atualização automática' : ''}
+        >
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={handleAutoSyncToggle}
+            disabled={!isValidated}
+            className="w-4 h-4 rounded-sm accent-[#008542] cursor-pointer disabled:cursor-not-allowed"
+          />
+          <span>Atualizar dados automaticamente ao abrir o app</span>
+          {!isValidated && (
+            <span className="text-[11px] text-orange-800 bg-orange-50 px-2 py-0.5 rounded font-semibold">
+              Requer validação prévia
+            </span>
+          )}
+        </label>
 
         {hasSafetyBackup && (
           <Button
@@ -509,62 +366,10 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({
             size="sm"
             onClick={() => setShowUndoConfirm(true)}
             leftIcon={<RotateCcw className="w-3.5 h-3.5 text-rose-600" />}
-            className="text-rose-700 border-rose-200 hover:bg-rose-50 self-start sm:self-center"
+            className="text-rose-700 border-rose-200 hover:bg-rose-50"
           >
             Desfazer Sincronização
           </Button>
-        )}
-      </div>
-
-      {/* Multi-Device Quick Access Card */}
-      <div className="bg-[#F6F8F7] border border-slate-200 rounded-xl p-4 space-y-3">
-        <div className="flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#071F14] text-[#FDB913] flex items-center justify-center shrink-0">
-            <Smartphone className="w-4 h-4" aria-hidden="true" />
-          </div>
-          <div>
-            <h5 className="text-xs sm:text-sm font-bold text-slate-900">
-              Acesso em Vários Computadores e Celulares (1 Clique)
-            </h5>
-            <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-              Depois de configurar a URL do Apps Script acima, gere um <strong>Link Conectado</strong> para abrir no celular ou em outro PC sem precisar colar a URL do Drive de novo.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-          <div className="sm:col-span-2">
-            <label htmlFor="share-app-url-input" className="block text-[11px] font-bold text-slate-700 mb-1">
-              Endereço do App (use o Shared App URL para abrir fora deste PC):
-            </label>
-            <input
-              id="share-app-url-input"
-              type="url"
-              value={shareAppUrl}
-              onChange={(e) => setShareAppUrl(e.target.value)}
-              placeholder="https://ais-pre-....run.app"
-              className="w-full text-xs font-mono px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800"
-            />
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={!pairingLink}
-            onClick={handleCopyPairingLink}
-            leftIcon={pairingCopied ? <Check className="w-3.5 h-3.5" /> : <LinkIcon className="w-3.5 h-3.5" />}
-          >
-            {pairingCopied ? 'Link Copiado!' : 'Copiar Link Celular/PC'}
-          </Button>
-        </div>
-
-        {pairingLink ? (
-          <div className="text-[11px] font-mono bg-white border border-slate-200 rounded-lg p-2.5 text-slate-700 break-all">
-            {pairingLink}
-          </div>
-        ) : (
-          <div className="text-[11px] text-slate-500">
-            Cole uma URL válida do Apps Script (/exec) acima para gerar seu link de acesso multi-dispositivo.
-          </div>
         )}
       </div>
 

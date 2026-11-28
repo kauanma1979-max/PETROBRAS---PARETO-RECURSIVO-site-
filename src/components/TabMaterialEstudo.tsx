@@ -12,24 +12,14 @@ import {
   Search, 
   Lightbulb, 
   Table, 
-  ChevronRight,
-  Brain,
-  Sparkles,
+  ChevronRight
 } from 'lucide-react';
-import {
-  findMatchingSyllabusTopicId,
-  type CesgranrioAiLaunchRequest,
-} from '../data/cesgranrioDna';
 
 interface TabMaterialEstudoProps {
   onOpenCalculator: (formulaNome?: string) => void;
-  onLaunchCesgranrioAi?: (req: CesgranrioAiLaunchRequest) => void;
 }
 
-export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({
-  onOpenCalculator,
-  onLaunchCesgranrioAi,
-}) => {
+export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalculator }) => {
   const orderedModules = useMemo(() => sortMaterialModulesByPareto(MATERIAL_ESTUDOS), []);
 
   const [moduloAtivo, setModuloAtivo] = useState<string>(() => {
@@ -291,7 +281,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({
                 <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-2">
                   <div className="flex items-center space-x-2 text-xs font-bold text-amber-800">
                     <Lightbulb className="w-4 h-4 text-amber-600" />
-                    <span>Pontos de Atenção para a Prova (Fundação Cesgranrio):</span>
+                    <span>Pontos de Atenção para a Prova (Cesgranrio &amp; Cebraspe):</span>
                   </div>
                   <ul className="space-y-1 text-xs text-slate-700">
                     {secao.pontosDeProva.map((ponto, pIdx) => (
@@ -301,40 +291,6 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({
                       </li>
                     ))}
                   </ul>
-                  {onLaunchCesgranrioAi && (
-                    <div className="pt-2.5 mt-2 border-t border-amber-200/70 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onLaunchCesgranrioAi({
-                            topicId: findMatchingSyllabusTopicId(secao.codigoRef || secao.titulo),
-                            subTab: 'professor',
-                            customContext: secao.titulo,
-                            timestamp: Date.now(),
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-lg bg-white hover:bg-[#E6F4EC] text-xs font-semibold text-[#006837] border border-[#008542]/30 transition cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
-                      >
-                        <Brain className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Professor IA (9 Passos)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onLaunchCesgranrioAi({
-                            topicId: findMatchingSyllabusTopicId(secao.codigoRef || secao.titulo),
-                            subTab: 'questoes',
-                            customContext: secao.titulo,
-                            timestamp: Date.now(),
-                          })
-                        }
-                        className="px-3 py-1.5 rounded-lg bg-white hover:bg-orange-50 text-xs font-semibold text-orange-800 border border-orange-300 transition cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Gerar Questões Cesgranrio</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* SEÇÃO 1: Mapas Mentais em Imagem / PDF & Anotações Pessoais */}

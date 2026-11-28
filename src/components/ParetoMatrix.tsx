@@ -18,19 +18,10 @@ import {
   AlertTriangle,
   Target,
   Layers,
-  Brain,
 } from 'lucide-react';
 import { exportFullBackup } from '../utils/backupStorage';
-import {
-  findMatchingSyllabusTopicId,
-  type CesgranrioAiLaunchRequest,
-} from '../data/cesgranrioDna';
 
-interface ParetoMatrixProps {
-  onLaunchCesgranrioAi?: (req: CesgranrioAiLaunchRequest) => void;
-}
-
-export const ParetoMatrix: React.FC<ParetoMatrixProps> = ({ onLaunchCesgranrioAi }) => {
+export const ParetoMatrix: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<'todas' | 'camada1' | 'camada2' | 'camada3'>('todas');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('todas');
   const [selectedOrigin, setSelectedOrigin] = useState<'todas' | OrigemEdital>('todas');
@@ -469,7 +460,7 @@ export const ParetoMatrix: React.FC<ParetoMatrixProps> = ({ onLaunchCesgranrioAi
               CAMADA 3 — Micro (Padrão das Bancas &amp; Armadilhas de Prova)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Detalhamento de cobrança (Fundação Cesgranrio), origem no edital e pegadinha mais recorrente.
+              Detalhamento de cobrança (Cesgranrio e Cebraspe), origem no edital e pegadinha mais recorrente.
             </p>
           </div>
 
@@ -545,41 +536,6 @@ export const ParetoMatrix: React.FC<ParetoMatrixProps> = ({ onLaunchCesgranrioAi
                       </div>
                     </div>
                   </div>
-
-                  {onLaunchCesgranrioAi && (
-                    <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Brain className="w-3.5 h-3.5 text-[#006837]" aria-hidden="true" />}
-                        onClick={() =>
-                          onLaunchCesgranrioAi({
-                            topicId: findMatchingSyllabusTopicId(micro.codigoRef || micro.name),
-                            subTab: 'professor',
-                            customContext: `${micro.name} (${micro.bancaPattern})`,
-                            timestamp: Date.now(),
-                          })
-                        }
-                      >
-                        Estudar (9 Passos)
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Sparkles className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />}
-                        onClick={() =>
-                          onLaunchCesgranrioAi({
-                            topicId: findMatchingSyllabusTopicId(micro.codigoRef || micro.name),
-                            subTab: 'questoes',
-                            customContext: `${micro.name} — foco em ${micro.keyTrap}`,
-                            timestamp: Date.now(),
-                          })
-                        }
-                      >
-                        Treinar Questões A–E
-                      </Button>
-                    </div>
-                  )}
                 </Card>
               ))}
             </div>

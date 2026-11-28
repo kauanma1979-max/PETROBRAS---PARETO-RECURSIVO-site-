@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { ProgressBar } from './ui/ProgressBar';
 import { PetrobrasLogo } from './PetrobrasLogo';
-import { PWAInstallButton } from './PWAInstallButton';
 import {
   DAILY_GOAL_MINUTES,
   formatMinutesAsHoursMinutes,
@@ -102,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <span aria-hidden="true" className="text-emerald-700 hidden sm:inline">·</span>
             <span className="hidden sm:inline text-orange-300 font-medium">
-              Banca: Fundação Cesgranrio
+              Cesgranrio &amp; Cebraspe
             </span>
           </div>
         </div>
@@ -188,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 sm:border-l sm:border-[#1B4F36] sm:pl-3">
-              <PWAInstallButton />
               <button
                 id="btn-open-drive-sync"
                 type="button"

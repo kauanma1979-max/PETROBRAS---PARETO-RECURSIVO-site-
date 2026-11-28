@@ -45,10 +45,8 @@ import {
   Trash2,
   Layers,
   Filter,
-  Brain,
 } from 'lucide-react';
 import { exportFullBackup, notifyDataUpdated } from '../utils/backupStorage';
-import type { CesgranrioAiLaunchRequest } from '../data/cesgranrioDna';
 
 interface TopicProgress {
   teoria: boolean;
@@ -73,13 +71,7 @@ const VALID_MACROS: MacroAreaId[] = [
 
 const STORAGE_KEY = 'transpetro_edital_verticalizado_progress_v2';
 
-interface EditalVerticalizadoProps {
-  onLaunchCesgranrioAi?: (req: CesgranrioAiLaunchRequest) => void;
-}
-
-export const EditalVerticalizado: React.FC<EditalVerticalizadoProps> = ({
-  onLaunchCesgranrioAi,
-}) => {
+export const EditalVerticalizado: React.FC = () => {
   const [progressState, setProgressState] = useState<Record<string, TopicProgress>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -1272,7 +1264,7 @@ export const EditalVerticalizado: React.FC<EditalVerticalizadoProps> = ({
                                     className="w-4 h-4 text-[#008542] shrink-0"
                                     aria-hidden="true"
                                   />
-                                  <span>Escopo Técnico &amp; Foco de Prova (Fundação Cesgranrio)</span>
+                                  <span>Escopo Técnico &amp; Foco de Prova (Cesgranrio / Cebraspe)</span>
                                 </div>
                                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
                                   {item.resumoEstrategico}
@@ -1298,7 +1290,7 @@ export const EditalVerticalizado: React.FC<EditalVerticalizadoProps> = ({
                                   <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
                                     <span>Registro de Questões Realizadas</span>
                                     <span className="text-[11px] font-normal text-slate-500">
-                                      Padrão Cesgranrio
+                                      Cesgranrio / Cebraspe
                                     </span>
                                   </div>
 
@@ -1428,40 +1420,6 @@ export const EditalVerticalizado: React.FC<EditalVerticalizadoProps> = ({
                                       >
                                         Concluir 3 Etapas
                                       </Button>
-                                      {onLaunchCesgranrioAi && (
-                                        <>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            leftIcon={<Brain className="w-3.5 h-3.5 text-[#006837]" aria-hidden="true" />}
-                                            onClick={() =>
-                                              onLaunchCesgranrioAi({
-                                                topicId: item.id,
-                                                subTab: 'professor',
-                                                timestamp: Date.now(),
-                                              })
-                                            }
-                                            title="Abrir aula guiada em 9 passos com DNA Cesgranrio"
-                                          >
-                                            Professor IA
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            leftIcon={<Sparkles className="w-3.5 h-3.5 text-orange-600" aria-hidden="true" />}
-                                            onClick={() =>
-                                              onLaunchCesgranrioAi({
-                                                topicId: item.id,
-                                                subTab: 'questoes',
-                                                timestamp: Date.now(),
-                                              })
-                                            }
-                                            title="Gerar questão inédita A–E no padrão Cesgranrio"
-                                          >
-                                            Questões A–E
-                                          </Button>
-                                        </>
-                                      )}
                                     </div>
 
                                     {prog.notas && (

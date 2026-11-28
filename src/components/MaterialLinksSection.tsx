@@ -48,10 +48,10 @@ const INITIAL_DEFAULT_LINKS: MaterialLinkItem[] = [
   {
     id: 'link-ref-petrobras',
     moduloId: 'geral',
-    titulo: 'Petrobras / Transpetro — Portal Cesgranrio (Referência Operação Júnior)',
-    url: 'https://concursos.cesgranrio.org.br/portal/avaliacoes/22',
-    tipo: 'web',
-    descricao: 'Referência da banca Fundação Cesgranrio para os 32 objetos de Operação (Transpetro 2018 como prova-base).',
+    titulo: 'Petrobras 2023.2 — Edital nº 1 Cebraspe (Referência Ênfase 8: Operação)',
+    url: 'https://cdn.cebraspe.org.br/concursos/petrobras_23_ntj/arquivos/ED_1_PETROBRAS_PSP_23_2_ABERTURA_ATUALIZADO_RET_3_DOU.PDF',
+    tipo: 'pdf',
+    descricao: 'Anexo IV — Objetos de Avaliação da Ênfase 8: Operação (Blocos I, II e III).',
     dataAdicionado: 'Referência Oficial'
   },
   {
