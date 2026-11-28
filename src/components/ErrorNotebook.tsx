@@ -29,9 +29,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
+  BACKUP_FILE_NAME,
   exportFullBackup,
   STORAGE_KEYS,
   exportErrorNotebookJson,
+  notifyDataUpdated,
 } from '../utils/backupStorage';
 
 export interface ErrorEntry {
@@ -249,12 +251,45 @@ export const ErrorNotebook: React.FC = () => {
     regraCorreta: '',
   });
 
-  // Simulador de Acertos por Área Técnica (Base percentual sem quantidades fictícias de edital aberto)
-  const [simInst, setSimInst] = useState<number>(80);
-  const [simMec, setSimMec] = useState<number>(75);
-  const [simQui, setSimQui] = useState<number>(78);
-  const [simEle, setSimEle] = useState<number>(70);
-  const [simGerais, setSimGerais] = useState<number>(80);
+  // Simulador de Acertos por Área Técnica (persistido em localStorage e incluído no backup)
+  const loadSimulatorFromStorage = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ERROR_NOTEBOOK_SIMULATOR);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            simInst: typeof parsed.simInst === 'number' ? parsed.simInst : 80,
+            simMec: typeof parsed.simMec === 'number' ? parsed.simMec : 75,
+            simQui: typeof parsed.simQui === 'number' ? parsed.simQui : 78,
+            simEle: typeof parsed.simEle === 'number' ? parsed.simEle : 70,
+            simGerais: typeof parsed.simGerais === 'number' ? parsed.simGerais : 80,
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return { simInst: 80, simMec: 75, simQui: 78, simEle: 70, simGerais: 80 };
+  };
+
+  const initialSim = loadSimulatorFromStorage();
+  const [simInst, setSimInst] = useState<number>(initialSim.simInst);
+  const [simMec, setSimMec] = useState<number>(initialSim.simMec);
+  const [simQui, setSimQui] = useState<number>(initialSim.simQui);
+  const [simEle, setSimEle] = useState<number>(initialSim.simEle);
+  const [simGerais, setSimGerais] = useState<number>(initialSim.simGerais);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ERROR_NOTEBOOK_SIMULATOR,
+        JSON.stringify({ simInst, simMec, simQui, simEle, simGerais })
+      );
+    } catch {
+      // ignore
+    }
+  }, [simInst, simMec, simQui, simEle, simGerais]);
 
   const mediaEspecificos = Math.round(
     simInst * 0.17 + simMec * 0.35 + simQui * 0.39 + simEle * 0.09
@@ -268,6 +303,11 @@ export const ErrorNotebook: React.FC = () => {
     try {
       localStorage.setItem(STORAGE_KEYS.ERROR_NOTEBOOK, JSON.stringify(newErrors));
       localStorage.setItem('transpetro_caderno_erros_customized', 'true');
+      window.dispatchEvent(
+        new CustomEvent('transpetro_storage_changed', {
+          detail: { key: STORAGE_KEYS.ERROR_NOTEBOOK },
+        })
+      );
     } catch (e) {
       console.error('Error writing error notebook to storage', e);
     }
@@ -288,10 +328,27 @@ export const ErrorNotebook: React.FC = () => {
             errorsRef.current = cleaned;
             setErrors(cleaned);
           }
+        } else {
+          errorsRef.current = [];
+          setErrors([]);
         }
       } catch {
         // ignore
       }
+
+      try {
+        const savedAreas = localStorage.getItem(AREA_CUSTOM_STORAGE_KEY);
+        setCustomAreas(savedAreas ? JSON.parse(savedAreas) : {});
+      } catch {
+        setCustomAreas({});
+      }
+
+      const sim = loadSimulatorFromStorage();
+      setSimInst(sim.simInst);
+      setSimMec(sim.simMec);
+      setSimQui(sim.simQui);
+      setSimEle(sim.simEle);
+      setSimGerais(sim.simGerais);
     };
     window.addEventListener('transpetro_data_restored', handleStorageRestore);
     return () => {
@@ -350,7 +407,10 @@ export const ErrorNotebook: React.FC = () => {
     setTimeout(() => setSaveToast(null), 4000);
 
     if (downloadJson) {
-      exportErrorNotebookJson();
+      exportErrorNotebookJson().catch((err: any) => {
+        setSaveToast(`Erro ao gerar backup: ${err?.message || 'Falha de validação'}`);
+        setTimeout(() => setSaveToast(null), 4000);
+      });
     }
   };
 
@@ -383,7 +443,10 @@ export const ErrorNotebook: React.FC = () => {
     setTimeout(() => setSaveToast(null), 3000);
 
     if (downloadJson) {
-      exportErrorNotebookJson();
+      exportErrorNotebookJson().catch((err: any) => {
+        setSaveToast(`Erro ao gerar backup: ${err?.message || 'Falha de validação'}`);
+        setTimeout(() => setSaveToast(null), 4000);
+      });
     }
   };
 
@@ -407,6 +470,7 @@ export const ErrorNotebook: React.FC = () => {
     setCustomAreas(next);
     try {
       localStorage.setItem(AREA_CUSTOM_STORAGE_KEY, JSON.stringify(next));
+      notifyDataUpdated(AREA_CUSTOM_STORAGE_KEY);
     } catch {
       // ignore
     }
@@ -565,8 +629,17 @@ export const ErrorNotebook: React.FC = () => {
               variant="primary"
               size="sm"
               leftIcon={<Database className="w-3.5 h-3.5" aria-hidden="true" />}
-              onClick={() => exportFullBackup()}
-              title="Baixar backup único completo (Petrobras_Enfase_Operacao_Jr.json)"
+              onClick={async () => {
+                try {
+                  await exportFullBackup();
+                  setSaveToast(`Backup "${BACKUP_FILE_NAME}" baixado e validado com sucesso!`);
+                  setTimeout(() => setSaveToast(null), 3500);
+                } catch (err: any) {
+                  setSaveToast(`Erro ao gerar backup: ${err?.message || 'Falha na validação'}`);
+                  setTimeout(() => setSaveToast(null), 4000);
+                }
+              }}
+              title={`Baixar backup único completo (${BACKUP_FILE_NAME})`}
             >
               Backup Completo (.JSON)
             </Button>
@@ -945,7 +1018,7 @@ export const ErrorNotebook: React.FC = () => {
                     id={`btn-filter-disc-${normalizeStr(disc.key)}`}
                     aria-pressed={isSelected}
                     onClick={() => setFilterDisc(disc.key)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`btn-tactile px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/70'
@@ -979,7 +1052,7 @@ export const ErrorNotebook: React.FC = () => {
                   type="button"
                   aria-pressed={filterOrigin === opt.id}
                   onClick={() => setFilterOrigin(opt.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`btn-tactile px-2.5 py-1 rounded-lg text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                     filterOrigin === opt.id
                       ? 'bg-[#008542] text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1021,7 +1094,7 @@ export const ErrorNotebook: React.FC = () => {
               return (
                 <div
                   key={err.id}
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                  className={`p-4 sm:p-5 rounded-2xl border transition-[border-color,background-color,box-shadow] duration-150 ease-[var(--ease-out)] ${
                     err.revisado
                       ? 'bg-slate-50/70 border-slate-200'
                       : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-2xs'

@@ -6,11 +6,14 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const VARIANT_MAP: Record<NonNullable<CardProps['variant']>, string> = {
-  default: 'bg-white border border-slate-200/90 text-slate-900 shadow-2xs',
+  default:
+    'bg-white border border-slate-200/80 text-slate-900 shadow-[0_1px_2px_rgba(7,31,20,0.04),0_10px_24px_-16px_rgba(7,31,20,0.09)]',
   interactive:
-    'bg-white border border-slate-200/90 text-slate-900 shadow-2xs hover:border-[#008542]/45 hover:bg-[#F6F8F7]/60 hover:shadow-sm transition-[border-color,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]',
-  muted: 'bg-[#F6F8F7] border border-slate-200/80 text-slate-900',
-  dark: 'bg-[#071F14] border border-[#123826] text-white shadow-sm',
+    'bg-white border border-slate-200/80 text-slate-900 shadow-[0_1px_2px_rgba(7,31,20,0.04),0_10px_24px_-16px_rgba(7,31,20,0.09)] card-interactive-hover',
+  muted:
+    'bg-[#F5F7F6] border border-slate-200/75 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]',
+  dark:
+    'bg-gradient-to-br from-[#071F14] via-[#092619] to-[#0B2E1E] border border-[#174630] text-white shadow-[0_6px_24px_-10px_rgba(7,31,20,0.45),inset_0_1px_0_rgba(255,255,255,0.06)]',
 };
 
 const PADDING_MAP: Record<NonNullable<CardProps['padding']>, string> = {

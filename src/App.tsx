@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { MotionConfig } from 'motion/react';
 import { Header } from './components/Header';
 import { EditalSummary } from './components/EditalSummary';
 import { EditalVerticalizado } from './components/EditalVerticalizado';
@@ -19,8 +18,10 @@ import { SYLLABUS_COUNTS } from './data/verticalSyllabusData';
 import {
   getDriveEndpoint,
   getDriveAutoSync,
+  getDriveAutoPush,
   getDriveSyncValidated,
   fetchGoogleDriveDataViaJsonp,
+  pushBackupToGoogleDrive,
   mergeTranspetroBackupData,
   savePreSyncSafetyBackup,
   setDriveSyncValidated,
@@ -143,6 +144,10 @@ export default function App() {
       if (savedDate && /^\d{4}-\d{2}-\d{2}$/.test(savedDate)) {
         setSelectedCalendarDate(savedDate);
       }
+      const savedTab = localStorage.getItem('transpetro_active_tab_v1');
+      if (savedTab) {
+        setActiveTab(savedTab);
+      }
       setResumeContext(resolveStudyResumeContext());
     } catch {
       /* ignore */
@@ -156,6 +161,30 @@ export default function App() {
     return () => {
       window.removeEventListener('transpetro_data_restored', handleDataRestored);
       window.removeEventListener('transpetro_focus_updated', refreshResume);
+    };
+  }, []);
+
+  useEffect(() => {
+    let pushTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleAutoPush = () => {
+      const isAutoPush = getDriveAutoPush();
+      const isValidated = getDriveSyncValidated();
+      const endpoint = getDriveEndpoint();
+      if (!isAutoPush || !isValidated || !endpoint || !endpoint.startsWith('https://script.google.com/')) {
+        return;
+      }
+      if (pushTimer) clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        pushBackupToGoogleDrive(endpoint).catch((err) => {
+          console.warn('Auto-push notice:', err?.message);
+        });
+      }, 4500);
+    };
+
+    window.addEventListener('transpetro_storage_changed', scheduleAutoPush);
+    return () => {
+      if (pushTimer) clearTimeout(pushTimer);
+      window.removeEventListener('transpetro_storage_changed', scheduleAutoPush);
     };
   }, []);
 
@@ -258,8 +287,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
   };
 
   return (
-    <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-[#F6F8F7] flex flex-col selection:bg-[#008542] selection:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#F5F7F6] bg-[radial-gradient(ellipse_at_top,rgba(0,133,66,0.045),transparent_55%)] flex flex-col selection:bg-[#008542] selection:text-white font-sans antialiased">
         <Header
           onResetProgress={() => setIsResetConfirmOpen(true)}
           onExportReport={handleExportReport}
@@ -275,7 +303,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-edital"
-            className={activeTab === 'edital' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'edital' ? 'block tab-panel-active' : 'hidden'}
           >
             <EditalSummary
               onNavigateTab={handleTabChange}
@@ -288,7 +316,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-verticalizado"
-            className={activeTab === 'verticalizado' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'verticalizado' ? 'block tab-panel-active' : 'hidden'}
           >
             <EditalVerticalizado />
           </div>
@@ -296,7 +324,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-pareto"
-            className={activeTab === 'pareto' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'pareto' ? 'block tab-panel-active' : 'hidden'}
           >
             <ParetoMatrix />
           </div>
@@ -304,7 +332,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-material"
-            className={activeTab === 'material' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'material' ? 'block tab-panel-active' : 'hidden'}
           >
             <TabMaterialEstudo onOpenCalculator={handleOpenCalculator} />
           </div>
@@ -312,7 +340,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-cronograma"
-            className={activeTab === 'cronograma' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'cronograma' ? 'block tab-panel-active' : 'hidden'}
           >
             <StudySchedule
               onLaunchTimer={setActiveTimerTarget}
@@ -324,7 +352,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-cortes"
-            className={activeTab === 'cortes' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'cortes' ? 'block tab-panel-active' : 'hidden'}
           >
             <CutRules />
           </div>
@@ -332,7 +360,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-banca"
-            className={activeTab === 'banca' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'banca' ? 'block tab-panel-active' : 'hidden'}
           >
             <BancaCesgranrio />
           </div>
@@ -340,7 +368,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           <div
             role="tabpanel"
             aria-labelledby="body-tab-nav-caderno"
-            className={activeTab === 'caderno' ? 'block animate-tabEnter' : 'hidden'}
+            className={activeTab === 'caderno' ? 'block tab-panel-active' : 'hidden'}
           >
             <ErrorNotebook />
           </div>
@@ -392,7 +420,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
         />
 
         {/* Clean Institutional Footer */}
-        <footer className="bg-[#071F14] text-slate-300 border-t border-[#133B28] text-xs mt-auto">
+        <footer className="bg-[#071F14] text-slate-300 border-t border-[#133B28] text-xs mt-auto pb-safe">
           <div className="h-0.5 w-full bg-gradient-to-r from-[#008542] via-[#FDB913] to-[#F97316]" aria-hidden="true" />
           <div className="max-w-7xl mx-auto py-5 px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -406,6 +434,5 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           </div>
         </footer>
       </div>
-    </MotionConfig>
   );
 }

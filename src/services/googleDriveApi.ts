@@ -1,11 +1,17 @@
-import { generateBackupPayload, restoreFromRawData } from '../utils/backupStorage';
 import {
+  generateCompleteBackupSync,
+  generateValidatedBackupAsync,
+  restoreFromRawData,
+} from '../utils/backupStorage';
+import {
+  getDriveFileId,
   GOOGLE_DRIVE_ALT_FILE_PREFIX,
   GOOGLE_DRIVE_BACKUP_FOLDER,
   GOOGLE_DRIVE_DEFAULT_FILE_PREFIX,
   GOOGLE_DRIVE_FILE_NAME,
   mergeTranspetroBackupData,
   savePreSyncSafetyBackup,
+  setDriveFileId,
   setDriveSyncValidated,
   setLastDriveSyncDate,
 } from '../utils/driveSync';
@@ -16,7 +22,7 @@ import {
 
 const DRIVE_FILES_API = 'https://www.googleapis.com/drive/v3/files';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
-const DRIVE_FIELDS = 'id,name,modifiedTime,mimeType,webViewLink,size';
+const DRIVE_FIELDS = 'id,name,modifiedTime,mimeType,webViewLink,size,trashed';
 
 export interface DriveFileSummary {
   id: string;
@@ -25,6 +31,7 @@ export interface DriveFileSummary {
   mimeType?: string;
   webViewLink?: string;
   size?: string;
+  trashed?: boolean;
 }
 
 function createNeedsAuthError(message: string): Error & { needsAuth?: boolean } {
@@ -66,7 +73,9 @@ async function driveFetch(url: string, init?: RequestInit): Promise<Response> {
     } catch {
       // ignore non-JSON error body
     }
-    throw new Error(errorMessage);
+    const err: any = new Error(errorMessage);
+    err.status = response.status;
+    throw err;
   }
 
   return response;
@@ -113,22 +122,48 @@ async function getOrCreateBackupFolderId(): Promise<string> {
 function pickBestBackupFile(files: DriveFileSummary[]): DriveFileSummary | null {
   if (files.length === 0) return null;
 
-  const exactMatch = files.find(
+  const primaryExact = files.find(
     (f) => f.name.trim().toLowerCase() === GOOGLE_DRIVE_FILE_NAME.toLowerCase()
   );
-  if (exactMatch) return exactMatch;
+  if (primaryExact) return primaryExact;
 
-  const prefixMatch = files.find((f) =>
+  const primaryPrefix = files.find((f) =>
     f.name.trim().toLowerCase().startsWith(GOOGLE_DRIVE_DEFAULT_FILE_PREFIX.toLowerCase())
   );
-  return prefixMatch || files[0];
+  if (primaryPrefix) return primaryPrefix;
+
+  const legacyMatch = files.find((f) =>
+    f.name.trim().toLowerCase().startsWith(GOOGLE_DRIVE_ALT_FILE_PREFIX.toLowerCase())
+  );
+  return legacyMatch || files[0];
+}
+
+export async function getDriveFileById(fileId: string): Promise<DriveFileSummary | null> {
+  try {
+    const resp = await driveFetch(
+      `${DRIVE_FILES_API}/${encodeURIComponent(fileId)}?fields=${encodeURIComponent(DRIVE_FIELDS)}`
+    );
+    const file = (await resp.json()) as DriveFileSummary;
+    if (file?.trashed) return null;
+    return file;
+  } catch (err: any) {
+    if (err?.status === 404) return null;
+    throw err;
+  }
 }
 
 export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | null> {
+  // 0. Verificar primeiro o ID persistido se existir
+  const knownId = getDriveFileId();
+  if (knownId) {
+    const byId = await getDriveFileById(knownId);
+    if (byId) return byId;
+  }
+
   const folderId = await findBackupFolderId();
   const nameFilter = `(name = '${GOOGLE_DRIVE_FILE_NAME}' or name contains '${GOOGLE_DRIVE_DEFAULT_FILE_PREFIX}' or name contains '${GOOGLE_DRIVE_ALT_FILE_PREFIX}')`;
 
-  // 1. Prioritize files inside the "backups" folder
+  // 1. Priorizar arquivos dentro da pasta "backups"
   if (folderId) {
     const folderParams = new URLSearchParams({
       q: `trashed = false and '${folderId}' in parents and ${nameFilter}`,
@@ -142,10 +177,13 @@ export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | nul
       ? folderData.files
       : [];
     const bestInFolder = pickBestBackupFile(folderFiles);
-    if (bestInFolder) return bestInFolder;
+    if (bestInFolder) {
+      setDriveFileId(bestInFolder.id);
+      return bestInFolder;
+    }
   }
 
-  // 2. Fallback: search Drive root/anywhere
+  // 2. Fallback: buscar no Drive inteiro para não gerar duplicata
   const params = new URLSearchParams({
     q: `trashed = false and ${nameFilter}`,
     orderBy: 'modifiedTime desc',
@@ -156,7 +194,11 @@ export async function findAppBackupFileInDrive(): Promise<DriveFileSummary | nul
   const response = await driveFetch(`${DRIVE_FILES_API}?${params.toString()}`);
   const data = await response.json();
   const files: DriveFileSummary[] = Array.isArray(data?.files) ? data.files : [];
-  return pickBestBackupFile(files);
+  const picked = pickBestBackupFile(files);
+  if (picked) {
+    setDriveFileId(picked.id);
+  }
+  return picked;
 }
 
 export async function listDriveFiles(
@@ -191,6 +233,8 @@ export async function pullAndMergeBackupFromDriveApi(
     );
   }
 
+  setDriveFileId(targetFile.id);
+
   const response = await driveFetch(
     `${DRIVE_FILES_API}/${encodeURIComponent(targetFile.id)}?alt=media`
   );
@@ -210,7 +254,7 @@ export async function pullAndMergeBackupFromDriveApi(
   }
 
   savePreSyncSafetyBackup();
-  const currentLocal = generateBackupPayload();
+  const currentLocal = generateCompleteBackupSync().payload;
   const merged = mergeTranspetroBackupData(currentLocal, parsed);
   const restoreResult = restoreFromRawData(merged);
 
@@ -221,30 +265,54 @@ export async function pullAndMergeBackupFromDriveApi(
   setDriveSyncValidated(true);
   setLastDriveSyncDate(new Date().toLocaleString('pt-BR'));
 
-  const daysCount = merged.data.completedDays?.length || 0;
-  const topicsCount = Object.keys(merged.data.verticalSyllabusProgress || {}).length;
-  const errorsCount = merged.data.errorNotebook?.length || 0;
+  const rc = merged.manifest?.recordCounts || {};
+  const topicsCount = rc.edital_verticalizado || Object.keys(merged.data.verticalSyllabusProgress || {}).length;
+  const errorsCount = rc.caderno_erros || merged.data.errorNotebook?.length || 0;
+  const focusCount = rc.foco_logs || merged.data.pomodoroFocusLogs?.length || 0;
 
   return {
     file: targetFile,
-    mergedStatsSummary: `${daysCount} sessões · ${topicsCount} tópicos · ${errorsCount} erros`,
+    mergedStatsSummary: `${topicsCount} tópicos · ${errorsCount} erros · ${focusCount} registros de foco`,
   };
 }
 
 export async function saveBackupToDriveApi(
-  existingFileId: string | null
+  existingFileId: string | null,
+  options?: { allowCreateIfMissing?: boolean }
 ): Promise<DriveFileSummary> {
-  const payload = generateBackupPayload();
-  const jsonContent = JSON.stringify(payload, null, 2);
+  // Gera e valida integralmente (SHA-256 + cobertura) antes de enviar
+  const bundle = await generateValidatedBackupAsync();
+  const jsonContent = bundle.jsonString;
+
+  let resolvedFileId = existingFileId;
+  if (!resolvedFileId) {
+    // Verifica se já existe arquivo antes de criar qualquer novo (zero duplicatas)
+    const discovered = await findAppBackupFileInDrive();
+    if (discovered) {
+      resolvedFileId = discovered.id;
+    } else if (options?.allowCreateIfMissing === false) {
+      throw new Error(
+        `Arquivo "${GOOGLE_DRIVE_FILE_NAME}" não foi encontrado no Google Drive. Operação interrompida sem criar duplicatas.`
+      );
+    }
+  } else {
+    // Confirma se o arquivo pelo ID ainda existe e não está na lixeira
+    const check = await getDriveFileById(resolvedFileId);
+    if (!check) {
+      throw new Error(
+        `O arquivo original do Google Drive (ID: ${resolvedFileId}) não foi encontrado. Operação interrompida para evitar duplicatas.`
+      );
+    }
+  }
 
   const boundary = `petrobras_drive_boundary_${Date.now()}`;
   const metadata: Record<string, unknown> = {
-    name: GOOGLE_DRIVE_FILE_NAME,
     mimeType: 'application/json',
   };
 
-  if (!existingFileId) {
+  if (!resolvedFileId) {
     const folderId = await getOrCreateBackupFolderId();
+    metadata.name = GOOGLE_DRIVE_FILE_NAME;
     metadata.parents = [folderId];
   }
 
@@ -260,12 +328,12 @@ export async function saveBackupToDriveApi(
     `--${boundary}--`,
   ].join('\r\n');
 
-  const url = existingFileId
-    ? `${DRIVE_UPLOAD_API}/${encodeURIComponent(existingFileId)}?uploadType=multipart&fields=${encodeURIComponent(DRIVE_FIELDS)}`
+  const url = resolvedFileId
+    ? `${DRIVE_UPLOAD_API}/${encodeURIComponent(resolvedFileId)}?uploadType=multipart&fields=${encodeURIComponent(DRIVE_FIELDS)}`
     : `${DRIVE_UPLOAD_API}?uploadType=multipart&fields=${encodeURIComponent(DRIVE_FIELDS)}`;
 
   const response = await driveFetch(url, {
-    method: existingFileId ? 'PATCH' : 'POST',
+    method: resolvedFileId ? 'PATCH' : 'POST',
     headers: {
       'Content-Type': `multipart/related; boundary=${boundary}`,
     },
@@ -273,6 +341,7 @@ export async function saveBackupToDriveApi(
   });
 
   const savedFile = (await response.json()) as DriveFileSummary;
+  setDriveFileId(savedFile.id);
   setDriveSyncValidated(true);
   setLastDriveSyncDate(new Date().toLocaleString('pt-BR'));
   return savedFile;
@@ -286,4 +355,7 @@ export async function trashDriveFileApi(fileId: string): Promise<void> {
     },
     body: JSON.stringify({ trashed: true }),
   });
+  if (getDriveFileId() === fileId) {
+    setDriveFileId(null);
+  }
 }

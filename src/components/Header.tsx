@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import {
   Compass,
   Download,
@@ -21,6 +23,8 @@ import {
   loadFocusLogs,
   toLocalDateKey,
 } from '../utils/studyFocusStorage';
+
+gsap.registerPlugin(useGSAP);
 
 interface HeaderProps {
   onResetProgress: () => void;
@@ -56,10 +60,41 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBackupModal,
   onOpenDriveSync,
 }) => {
+  const headerRef = useRef<HTMLElement>(null);
   const [focusSnapshot, setFocusSnapshot] = useState<HeaderFocusSnapshot>(() =>
     readHeaderFocusSnapshot()
   );
   const [driveConnectedEmail, setDriveConnectedEmail] = useState<string | null>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.from('.header-enter', {
+          y: 6,
+          scale: 0.99,
+          autoAlpha: 0,
+          duration: 0.26,
+          stagger: 0.05,
+          ease: 'power3.out',
+          clearProps: 'transform,opacity,visibility',
+        });
+      });
+
+      mm.add('(prefers-reduced-motion: reduce)', () => {
+        gsap.from('.header-enter', {
+          autoAlpha: 0,
+          duration: 0.16,
+          ease: 'power1.out',
+          clearProps: 'opacity,visibility',
+        });
+      });
+
+      return () => mm.revert();
+    },
+    { scope: headerRef }
+  );
 
   useEffect(() => {
     const syncCounters = () => {
@@ -78,15 +113,24 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="bg-[#071F14] text-white border-b border-[#133B28] relative z-20">
+    <header
+      ref={headerRef}
+      className="bg-gradient-to-b from-[#061A11] via-[#071F14] to-[#082417] text-white border-b border-[#16422D] relative z-20 overflow-hidden"
+    >
+      {/* Subtle radial atmospheric highlight behind brand area */}
+      <div
+        className="pointer-events-none absolute -top-24 left-12 w-96 h-56 rounded-full bg-[#008542]/18 blur-3xl"
+        aria-hidden="true"
+      />
+
       {/* Petrobras Green · Yellow · Orange Top Accent Bar */}
       <div
-        className="h-1 w-full bg-gradient-to-r from-[#008542] via-[#FDB913] to-[#F97316]"
+        className="h-1 w-full bg-gradient-to-r from-[#008542] via-[#FDB913] to-[#F97316] relative z-10"
         aria-hidden="true"
       />
 
       {/* Top Institutional Context Strip */}
-      <div className="bg-[#05160E] border-b border-[#123524] px-4 sm:px-6 py-2 text-xs">
+      <div className="bg-[#05160E]/90 border-b border-white/[0.07] px-4 sm:px-6 py-2 text-xs relative z-10">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-slate-300">
             <span className="font-display font-bold text-[#FDB913] tracking-tight whitespace-nowrap">
@@ -115,31 +159,37 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-5 relative z-10">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Brand Lockup with Petrobras Logo at Top */}
-          <div className="flex items-center gap-3.5 min-w-0">
-            <PetrobrasLogo className="w-11 h-11 sm:w-12 sm:h-12" />
+          <div className="header-enter flex items-center gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              <div
+                className="absolute inset-0 rounded-2xl bg-[#008542]/30 blur-md"
+                aria-hidden="true"
+              />
+              <PetrobrasLogo className="w-11 h-11 sm:w-12 sm:h-12 relative z-10" />
+            </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                <h1 className="text-lg sm:text-xl font-display font-bold tracking-tight text-white whitespace-nowrap">
+                <h1 className="text-lg sm:text-[22px] font-display font-bold tracking-[-0.02em] text-white whitespace-nowrap">
                   Plano Pareto Recursivo
                 </h1>
-                <span className="text-xs text-[#FDB913] font-semibold font-mono tabular-nums whitespace-nowrap">
+                <span className="text-xs text-[#FDB913] font-semibold font-mono tabular-nums whitespace-nowrap bg-[#FDB913]/10 border border-[#FDB913]/25 px-2 py-0.5 rounded-md">
                   42 Tópicos Unificados
                 </span>
                 <span className="hidden sm:inline-block text-[11px] font-semibold text-orange-300 whitespace-nowrap">
                   · Sistema Petrobras
                 </span>
               </div>
-              <p className="text-xs text-slate-200 mt-0.5 truncate">
+              <p className="text-xs text-slate-300 mt-1 truncate">
                 Conhecimentos Específicos Mesclados · Transpetro (38) + Petrobras (32) com Identificação de Origem
               </p>
             </div>
           </div>
 
           {/* Progress Widget & Global Actions */}
-          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 bg-[#0A291A] px-3.5 py-2.5 rounded-xl border border-[#184831]">
+          <div className="header-enter flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 bg-[#0B2A1B]/95 backdrop-blur-xs px-3.5 py-2.5 rounded-2xl border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_10px_24px_-14px_rgba(0,0,0,0.45)]">
             <div className="flex items-center gap-3">
               <div>
                 <div className="text-[11px] text-slate-300 font-medium">
@@ -176,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div
-              className="flex items-center gap-2 sm:border-l sm:border-[#1B4F36] sm:pl-3"
+              className="flex items-center gap-2 sm:border-l sm:border-white/10 sm:pl-3"
               title="Contagem atrelada apenas aos dias úteis estudados (Seg–Sex). Sábados e domingos não contam como foco nem quebram a sequência."
             >
               <Flame className="w-4 h-4 text-[#FDB913] shrink-0" aria-hidden="true" />
@@ -193,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:border-l sm:border-[#1B4F36] sm:pl-3">
+            <div className="flex items-center gap-1.5 sm:border-l sm:border-white/10 sm:pl-3">
               <PWAInstallButton />
               <button
                 id="btn-open-drive-sync"
@@ -205,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
                     ? `Google Drive conectado (${driveConnectedEmail})`
                     : 'Sincronizar dados com o Google Drive (Nuvem)'
                 }
-                className="h-9 px-3 rounded-lg bg-[#05160E] hover:bg-[#113825] text-slate-100 border border-[#1F5A3D] transition-colors text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="btn-tactile h-9 px-3 rounded-lg bg-[#05160E] hover:bg-[#113825] text-slate-100 border border-[#1F5A3D] transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Cloud
                   className={`w-3.5 h-3.5 ${driveConnectedEmail ? 'text-[#22C55E]' : 'text-[#FDB913]'}`}
@@ -220,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenBackupModal}
                 aria-label="Fazer Backup ou Restaurar Dados"
                 title="Fazer Backup ou Restaurar Dados do Aplicativo"
-                className="h-9 px-3 rounded-lg bg-[#008542] hover:bg-[#006837] text-white border border-[#1EA861]/40 transition-colors text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="btn-tactile h-9 px-3 rounded-lg bg-[#008542] hover:bg-[#006837] text-white border border-emerald-400/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Database className="w-3.5 h-3.5" aria-hidden="true" />
                 <span className="hidden md:inline">Backup / Restaurar</span>
@@ -233,7 +283,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onExportReport}
                 aria-label="Exportar relatório de estudos em Markdown"
                 title="Exportar Resumo de Estudos em Markdown"
-                className="h-9 px-3 rounded-lg bg-orange-600 hover:bg-orange-700 text-white border border-orange-500/40 transition-colors text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className="btn-tactile h-9 px-3 rounded-lg bg-orange-600 hover:bg-orange-700 text-white border border-orange-400/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">Relatório</span>
@@ -245,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onResetProgress}
                 aria-label="Reiniciar registros de foco e cronômetro"
                 title="Reiniciar Registros de Foco e Cronômetro"
-                className="h-9 w-9 rounded-lg bg-[#05160E] hover:bg-rose-950/80 text-slate-300 hover:text-rose-300 border border-[#1F5A3D] transition-colors inline-flex items-center justify-center shrink-0 cursor-pointer"
+                className="btn-tactile h-9 w-9 rounded-lg bg-[#05160E] hover:bg-rose-950/80 text-slate-300 hover:text-rose-300 border border-[#1F5A3D] transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] inline-flex items-center justify-center shrink-0 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
               </button>

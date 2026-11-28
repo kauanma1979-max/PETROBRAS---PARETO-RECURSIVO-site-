@@ -176,7 +176,11 @@ export const ParetoMatrix: React.FC = () => {
               variant="primary"
               size="sm"
               leftIcon={<Database className="w-3.5 h-3.5" aria-hidden="true" />}
-              onClick={() => exportFullBackup()}
+              onClick={() => {
+                exportFullBackup().catch((err) => {
+                  console.error('Erro ao gerar backup:', err);
+                });
+              }}
               title="Baixar backup completo de todos os dados do sistema em JSON"
             >
               Salvar Backup JSON
@@ -194,7 +198,7 @@ export const ParetoMatrix: React.FC = () => {
                   type="button"
                   aria-pressed={activeLayer === layer.id}
                   onClick={() => setActiveLayer(layer.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  className={`btn-tactile px-3 py-1.5 rounded-lg text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                     activeLayer === layer.id
                       ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -218,7 +222,7 @@ export const ParetoMatrix: React.FC = () => {
               type="button"
               aria-pressed={selectedDiscipline === 'todas'}
               onClick={() => setSelectedDiscipline('todas')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                 selectedDiscipline === 'todas'
                   ? 'bg-[#071F14] text-[#FDB913]'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -233,7 +237,7 @@ export const ParetoMatrix: React.FC = () => {
                 type="button"
                 aria-pressed={selectedDiscipline === m.id}
                 onClick={() => setSelectedDiscipline(m.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] flex items-center gap-1.5 cursor-pointer ${
                   selectedDiscipline === m.id
                     ? 'bg-[#008542] text-white'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -272,7 +276,7 @@ export const ParetoMatrix: React.FC = () => {
                   type="button"
                   aria-pressed={selectedOrigin === opt.id}
                   onClick={() => setSelectedOrigin(opt.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                     selectedOrigin === opt.id
                       ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

@@ -14,17 +14,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-[#008542] hover:bg-[#006837] active:bg-[#00522B] text-white border border-transparent shadow-2xs',
+    'bg-[#008542] hover:bg-[#006837] active:bg-[#00522B] text-white border border-emerald-400/20 shadow-[0_1px_2px_rgba(0,104,55,0.25),inset_0_1px_0_rgba(255,255,255,0.16)]',
   secondary:
-    'bg-[#071F14] hover:bg-[#0D3020] active:bg-[#04140D] text-white border border-transparent shadow-2xs',
+    'bg-[#071F14] hover:bg-[#0D3020] active:bg-[#04140D] text-white border border-white/10 shadow-[0_1px_2px_rgba(7,31,20,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]',
   orange:
-    'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white border border-transparent shadow-2xs',
+    'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white border border-orange-400/20 shadow-[0_1px_2px_rgba(234,88,12,0.25),inset_0_1px_0_rgba(255,255,255,0.16)]',
   outline:
-    'bg-white hover:bg-[#F6F8F7] active:bg-[#EBF2EE] text-slate-700 hover:text-[#071F14] border border-slate-200 hover:border-[#008542]/40 shadow-2xs',
+    'bg-white hover:bg-[#F5F7F6] active:bg-[#EBF2EE] text-slate-700 hover:text-[#071F14] border border-slate-200/90 hover:border-[#008542]/40 shadow-[0_1px_2px_rgba(7,31,20,0.04)]',
   ghost:
     'bg-transparent hover:bg-[#EFF4F1] active:bg-[#E2ECE6] text-slate-600 hover:text-[#071F14] border border-transparent',
   danger:
-    'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white border border-transparent shadow-2xs',
+    'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white border border-rose-400/20 shadow-[0_1px_2px_rgba(225,29,72,0.25),inset_0_1px_0_rgba(255,255,255,0.14)]',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -50,7 +50,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       type={type}
       disabled={disabled || isLoading}
-      className={`inline-flex items-center justify-center font-semibold whitespace-nowrap shrink-0 transition-[color,background-color,border-color,transform,opacity] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`btn-tactile inline-flex items-center justify-center font-semibold whitespace-nowrap shrink-0 transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-[var(--ease-out)] disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...props}
     >
       {isLoading ? (

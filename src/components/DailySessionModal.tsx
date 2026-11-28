@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import {
   CheckCircle2,
   FastForward,
@@ -10,6 +12,8 @@ import {
   X,
 } from 'lucide-react';
 import { Modal } from './ui/Modal';
+
+gsap.registerPlugin(useGSAP);
 import { OriginBadge } from './ui/OriginBadge';
 import { SubjectBaseBadge } from './ui/SubjectBaseBadge';
 import {
@@ -398,10 +402,12 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     window.addEventListener('focus', handleVisibilityOrFocus);
     window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('transpetro_prepare_backup_flush', handlePageHide);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('transpetro_prepare_backup_flush', handlePageHide);
     };
   }, [target, reconcileAt]);
 
@@ -691,6 +697,39 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
     ? Math.min(100, Math.round((phaseElapsedSec / timerState.phaseTotalSeconds) * 100))
     : 0;
 
+  const celebrationRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!isFinished) return;
+      const mm = gsap.matchMedia();
+
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.from('.goal-complete-item', {
+          y: 8,
+          scale: 0.96,
+          autoAlpha: 0,
+          duration: 0.28,
+          stagger: 0.05,
+          ease: 'back.out(1.3)',
+          clearProps: 'transform,opacity,visibility',
+        });
+      });
+
+      mm.add('(prefers-reduced-motion: reduce)', () => {
+        gsap.from('.goal-complete-item', {
+          autoAlpha: 0,
+          duration: 0.18,
+          ease: 'power1.out',
+          clearProps: 'opacity,visibility',
+        });
+      });
+
+      return () => mm.revert();
+    },
+    { scope: celebrationRef, dependencies: [isFinished] }
+  );
+
   return (
     <Modal
       isOpen={Boolean(target && timerState)}
@@ -743,7 +782,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 onClick={handleToggleSound}
                 aria-label={timerState.soundEnabled ? 'Desativar som do alarme' : 'Ativar som do alarme'}
                 title={timerState.soundEnabled ? 'Som ligado' : 'Som desligado'}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-colors duration-150 cursor-pointer"
+                className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 {timerState.soundEnabled ? (
                   <Volume2 className="w-4 h-4" aria-hidden="true" />
@@ -758,7 +797,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
               <button
                 type="button"
                 onClick={handleTestSound}
-                className="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-colors duration-150 cursor-pointer"
+                className="btn-tactile px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 Testar som
               </button>
@@ -767,7 +806,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 type="button"
                 onClick={handleClosePreserveCheckpoint}
                 aria-label="Minimizar e fechar janela do cronômetro"
-                className="p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors duration-150 cursor-pointer"
+                className="btn-tactile p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
@@ -815,8 +854,8 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
               <div className="max-w-md mx-auto space-y-1.5">
                 <div className="h-2.5 w-full rounded-full bg-white/20 overflow-hidden">
                   <div
-                    className="h-full bg-white transition-all duration-300"
-                    style={{ width: `${phasePct}%` }}
+                    className="h-full w-full bg-white origin-left transition-transform duration-300 ease-[var(--ease-out)]"
+                    style={{ transform: `scaleX(${phasePct / 100})` }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-mono text-white/90 tabular-nums">
@@ -829,12 +868,18 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-[#008542]/50 bg-[#0B2C1D] p-7 text-center space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-[#FDB913] mx-auto" aria-hidden="true" />
-              <h4 className="text-xl font-display font-extrabold text-white">
+            <div
+              ref={celebrationRef}
+              className="rounded-2xl border border-[#008542]/50 bg-[#0B2C1D] p-7 text-center space-y-3"
+            >
+              <CheckCircle2
+                className="goal-complete-item w-12 h-12 text-[#FDB913] mx-auto"
+                aria-hidden="true"
+              />
+              <h4 className="goal-complete-item text-xl font-display font-extrabold text-white">
                 META DIÁRIA CONCLUÍDA
               </h4>
-              <p className="text-xs sm:text-sm text-slate-200 max-w-md mx-auto leading-relaxed">
+              <p className="goal-complete-item text-xs sm:text-sm text-slate-200 max-w-md mx-auto leading-relaxed">
                 Você completou os 100 minutos líquidos de aula previstos para hoje (2 blocos de 50 min: {formatMinutesAsHoursMinutes(liveTodayMinutes)} de {DAILY_GOAL_MINUTES} min). Descanse para consolidar o conteúdo.
               </p>
             </div>
@@ -850,8 +895,8 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
             </div>
             <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
               <div
-                className="h-full bg-[#FDB913] transition-all duration-300"
-                style={{ width: `${dailyPct}%` }}
+                className="h-full w-full bg-[#FDB913] origin-left transition-transform duration-300 ease-[var(--ease-out)]"
+                style={{ transform: `scaleX(${dailyPct / 100})` }}
               />
             </div>
           </div>
@@ -890,7 +935,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 <button
                   type="button"
                   onClick={handleStopEarlyAndClose}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 cursor-pointer"
+                  className="btn-tactile inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
                   <span>Encerrar</span>
@@ -901,7 +946,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                     type="button"
                     id="btn-pomodoro-primary"
                     onClick={timerState.isRunning ? handlePause : handleStartOrResume}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-sm font-extrabold shadow-sm transition-colors duration-150 cursor-pointer"
+                    className="btn-tactile inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-sm font-extrabold shadow-sm transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                   >
                     {timerState.isRunning ? (
                       <>
@@ -922,7 +967,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                     type="button"
                     onClick={handleRequestAdvancePhase}
                     title="Avançar fase"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 cursor-pointer"
+                    className="btn-tactile inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                   >
                     <FastForward className="w-4 h-4" aria-hidden="true" />
                     <span>Avançar fase</span>
@@ -934,7 +979,7 @@ export const DailySessionModal: React.FC<DailySessionModalProps> = ({
                 <button
                   type="button"
                   onClick={handleStopEarlyAndClose}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#008542] hover:bg-[#006837] text-white text-sm font-extrabold transition-colors duration-150 cursor-pointer"
+                  className="btn-tactile inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#008542] hover:bg-[#006837] text-white text-sm font-extrabold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
                   <span>Fechar e salvar progresso</span>

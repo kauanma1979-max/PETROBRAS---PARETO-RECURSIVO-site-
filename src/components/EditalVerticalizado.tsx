@@ -169,9 +169,26 @@ export const EditalVerticalizado: React.FC = () => {
     const handleStorageRestore = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          setProgressState(JSON.parse(saved));
-        }
+        setProgressState(saved ? JSON.parse(saved) : {});
+      } catch {
+        // ignore
+      }
+      try {
+        const macro = localStorage.getItem('transpetro_vertical_macro');
+        setSelectedMacro(
+          macro && VALID_MACROS.includes(macro as MacroAreaId) ? (macro as MacroAreaId) : 'todas'
+        );
+        const origem = localStorage.getItem('transpetro_vertical_origem');
+        setSelectedOrigin(
+          origem === 'ambos' || origem === 'transpetro' || origem === 'petrobras'
+            ? origem
+            : 'todas'
+        );
+        const prio = localStorage.getItem('transpetro_vertical_prioridade');
+        setSelectedPrioridade(
+          prio === 'CRÍTICA' || prio === 'ALTA' || prio === 'MÉDIA' ? prio : 'todas'
+        );
+        setSelectedStatus(localStorage.getItem('transpetro_vertical_status') || 'todos');
       } catch {
         // ignore
       }
@@ -264,10 +281,15 @@ export const EditalVerticalizado: React.FC = () => {
     setCollapsedMacroSections((prev) => ({ ...prev, [macroId]: !prev[macroId] }));
   };
 
-  const handleDownloadBackupJson = () => {
-    exportFullBackup();
-    setGlobalSaveFeedback('Arquivo de backup JSON gerado com sucesso.');
-    setTimeout(() => setGlobalSaveFeedback(null), 3000);
+  const handleDownloadBackupJson = async () => {
+    try {
+      await exportFullBackup();
+      setGlobalSaveFeedback('Arquivo de backup JSON gerado e validado com sucesso.');
+      setTimeout(() => setGlobalSaveFeedback(null), 3000);
+    } catch (err: any) {
+      setGlobalSaveFeedback(`Erro ao gerar backup: ${err?.message || 'Falha na validação'}`);
+      setTimeout(() => setGlobalSaveFeedback(null), 4000);
+    }
   };
 
   const getMacroIcon = (macroId: MacroAreaId, className: string = 'w-5 h-5') => {
@@ -728,10 +750,10 @@ export const EditalVerticalizado: React.FC = () => {
               id={`card-macro-${macro.id}`}
               aria-pressed={isSelected}
               onClick={() => setSelectedMacro(isSelected ? 'todas' : macro.id)}
-              className={`p-4 rounded-2xl border text-left transition-[border-color,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] flex flex-col justify-between cursor-pointer ${
+              className={`btn-tactile p-4 rounded-2xl border text-left flex flex-col justify-between cursor-pointer ${
                 isSelected
-                  ? 'bg-[#071F14] text-white border-[#071F14] shadow-sm ring-2 ring-orange-500/70'
-                  : 'bg-white text-slate-800 border-slate-200/90 hover:border-[#008542]/45 hover:bg-[#F6F8F7]/60 shadow-2xs'
+                  ? 'bg-[#071F14] text-white border-[#071F14] shadow-sm ring-2 ring-orange-500/70 transition-[border-color,background-color,box-shadow,transform] duration-150 ease-[var(--ease-out)]'
+                  : 'card-interactive-hover bg-white text-slate-800 border-slate-200/90 shadow-2xs'
               }`}
             >
               <div>
@@ -824,7 +846,7 @@ export const EditalVerticalizado: React.FC = () => {
                 id="tab-macro-todas"
                 aria-pressed={selectedMacro === 'todas'}
                 onClick={() => setSelectedMacro('todas')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
+                className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] flex items-center gap-1.5 cursor-pointer ${
                   selectedMacro === 'todas'
                     ? 'bg-[#071F14] text-[#FDB913]'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -845,7 +867,7 @@ export const EditalVerticalizado: React.FC = () => {
                     id={`tab-macro-btn-${macro.id}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedMacro(macro.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
+                    className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-semibold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] flex items-center gap-1.5 cursor-pointer ${
                       isActive
                         ? 'bg-[#008542] text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -885,7 +907,7 @@ export const EditalVerticalizado: React.FC = () => {
                 type="button"
                 aria-pressed={selectedOrigin === opt.id}
                 onClick={() => setSelectedOrigin(opt.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 cursor-pointer ${
+                className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-semibold transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                   selectedOrigin === opt.id
                     ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

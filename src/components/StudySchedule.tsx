@@ -200,6 +200,11 @@ export const StudySchedule: React.FC<StudyScheduleProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.SCHEDULE_DAY_NOTES, JSON.stringify(subjectNotes));
+      window.dispatchEvent(
+        new CustomEvent('transpetro_storage_changed', {
+          detail: { key: STORAGE_KEYS.SCHEDULE_DAY_NOTES },
+        })
+      );
     } catch (e) {
       console.error('Error saving schedule session notes', e);
     }
@@ -209,9 +214,7 @@ export const StudySchedule: React.FC<StudyScheduleProps> = ({
     const handleStorageRestore = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.SCHEDULE_DAY_NOTES);
-        if (saved) {
-          setSubjectNotes(JSON.parse(saved));
-        }
+        setSubjectNotes(saved ? JSON.parse(saved) : {});
       } catch {
         // ignore
       }
@@ -295,7 +298,11 @@ export const StudySchedule: React.FC<StudyScheduleProps> = ({
               variant="primary"
               size="sm"
               leftIcon={<Database className="w-3.5 h-3.5" aria-hidden="true" />}
-              onClick={() => exportFullBackup()}
+              onClick={() => {
+                exportFullBackup().catch((err) => {
+                  console.error('Erro ao gerar backup:', err);
+                });
+              }}
               title="Baixar backup completo de todos os dados e anotações"
             >
               Salvar Backup JSON

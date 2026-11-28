@@ -220,6 +220,11 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
     const deduplicated = sanitizeAndDeduplicate(links);
     try {
       localStorage.setItem('transpetro_material_links_v1', JSON.stringify(deduplicated));
+      window.dispatchEvent(
+        new CustomEvent('transpetro_storage_changed', {
+          detail: { key: 'transpetro_material_links_v1' },
+        })
+      );
     } catch (e) {
       console.error('Error saving links', e);
     }
@@ -230,9 +235,14 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
       try {
         const saved = localStorage.getItem('transpetro_material_links_v1');
         if (saved) {
-          setLinks(sanitizeAndDeduplicate(JSON.parse(saved)));
+          const parsed = JSON.parse(saved);
+          setLinks(Array.isArray(parsed) ? sanitizeAndDeduplicate(parsed) : sanitizeAndDeduplicate(INITIAL_DEFAULT_LINKS));
+        } else {
+          setLinks(sanitizeAndDeduplicate(INITIAL_DEFAULT_LINKS));
         }
-      } catch (e) { /* ignore */ }
+      } catch {
+        // ignore
+      }
     };
 
     window.addEventListener('transpetro_data_restored', handleRestore);
@@ -639,10 +649,10 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-[#071F14] border-b border-[#133B28] text-white p-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <LinkIcon className="w-5 h-5 text-blue-400" />
-                <h4 className="font-bold text-sm">
+                <LinkIcon className="w-5 h-5 text-[#FDB913]" />
+                <h4 className="font-display font-bold text-sm">
                   {editingItem ? 'Editar Card de Material' : 'Adicionar Novo Card de Material'}
                 </h4>
               </div>
@@ -650,17 +660,17 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
                 type="button"
                 aria-label="Fechar janela"
                 onClick={() => setShowModal(false)} 
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="btn-tactile p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#113624] transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
+            <form onSubmit={handleSave} className="modal-scroll-area p-5 space-y-4 overflow-y-auto">
               {/* Inline Error Banner */}
               {formError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2 animate-fadeIn">
+                <div className="toast-enter p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div className="leading-relaxed font-medium">{formError}</div>
                 </div>
@@ -758,13 +768,13 @@ export const MaterialLinksSection: React.FC<MaterialLinksSectionProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="btn-tactile px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition cursor-pointer flex items-center gap-1.5"
+                  className="btn-tactile px-5 py-2.5 rounded-xl bg-[#008542] hover:bg-[#006837] text-white font-bold text-xs shadow-xs transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
                   <span>{editingItem ? 'Salvar Alterações' : 'Adicionar Card'}</span>

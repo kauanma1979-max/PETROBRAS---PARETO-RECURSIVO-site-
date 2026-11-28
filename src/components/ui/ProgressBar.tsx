@@ -42,8 +42,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       } ${trackTheme === 'dark' ? 'bg-[#0D3221]' : 'bg-slate-200/80'} ${className}`}
     >
       <div
-        className={`h-full rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${BAR_COLORS[tone]}`}
-        style={{ width: `${pct}%` }}
+        className={`h-full w-full rounded-full origin-left transition-transform duration-300 ease-[var(--ease-out)] ${BAR_COLORS[tone]}`}
+        style={{ transform: `scaleX(${pct / 100})` }}
       />
     </div>
   );

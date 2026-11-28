@@ -41,6 +41,7 @@ import {
   buildDevicePairingLink,
   getGoogleAppsScriptTemplate,
   normalizeAppsScriptUrl,
+  setDriveFileId,
   GOOGLE_DRIVE_FILE_NAME,
   GOOGLE_DRIVE_ACCOUNT_EMAIL,
   GOOGLE_DRIVE_BACKUP_FOLDER,
@@ -310,7 +311,9 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
     try {
       if (mutation.kind === 'upload') {
         setOauthStatusText('Salvando arquivo no Google Drive...');
-        const saved = await saveBackupToDriveApi(mutation.existingFile?.id || null);
+        const saved = await saveBackupToDriveApi(mutation.existingFile?.id || null, {
+          allowCreateIfMissing: !mutation.existingFile,
+        });
         setDriveBackupFile(saved);
         setLastSync(getLastDriveSyncDate());
         setIsValidated(true);
@@ -340,6 +343,7 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
     const val = e.target.value;
     setEndpoint(val);
     setDriveEndpoint(val);
+    setDriveFileId(null);
     setUrlFixedNotice(false);
     if (isValidated) {
       setIsValidated(false);
@@ -516,7 +520,11 @@ export const DriveSyncPanel: React.FC<DriveSyncPanelProps> = ({ onSyncSuccess })
 
   const handleCopyScript = async () => {
     try {
-      const script = getGoogleAppsScriptTemplate(GOOGLE_DRIVE_FILE_NAME);
+      const script = getGoogleAppsScriptTemplate(
+        GOOGLE_DRIVE_FILE_NAME,
+        GOOGLE_DRIVE_BACKUP_FOLDER,
+        GOOGLE_DRIVE_ACCOUNT_EMAIL
+      );
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(script);
       }

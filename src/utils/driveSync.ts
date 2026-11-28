@@ -1,14 +1,29 @@
 /**
- * Google Drive Cloud Synchronization Utility for Transpetro 2026.3
- * Integrates via Google Apps Script (JSONP / REST) with safe data merging.
+ * Google Drive Cloud Synchronization Utility — PETROBRAS PARETO RECURSIVO
+ * Integrates via Google Apps Script (JSONP / REST) with safe merging, ID preservation, and integrity validation.
  */
 
 import {
-  BackupDataPayload,
-  generateBackupPayload,
-  restoreFromRawData,
-  STORAGE_KEYS
-} from './backupStorage';
+  BACKUP_FILE_NAME,
+  BACKUP_SCHEMA_VERSION,
+  EXCLUDED_STORAGE_KEYS,
+  LEGACY_BACKUP_FILE_NAME,
+  STORAGE_KEYS,
+} from './backupRegistry';
+import {
+  migrateBackupToCurrent,
+  type CompleteBackupPayload,
+} from './backupMigration';
+import {
+  generateCompleteBackupSync,
+  generateValidatedBackupAsync,
+} from './backupSerializer';
+import { applyBackupRestoreSync } from './backupRestoreService';
+import {
+  buildIntegrityCanonicalTarget,
+  computeSyncDigest,
+  validateBackupPayloadStructure,
+} from './backupValidator';
 import {
   deduplicateFocusLogs,
   normalizeRestoredPomodoroOnAppOpen,
@@ -21,41 +36,28 @@ export const STORAGE_KEY_DRIVE_AUTO_SYNC = 'google_drive_auto_sync_v1';
 export const STORAGE_KEY_DRIVE_AUTO_PUSH = 'google_drive_auto_push_v1';
 export const STORAGE_KEY_DRIVE_VALIDATED = 'google_drive_sync_validated_v1';
 export const STORAGE_KEY_DRIVE_LAST_SYNC = 'google_drive_last_sync_date_v1';
+export const STORAGE_KEY_DRIVE_FILE_ID = 'google_drive_sync_file_id_v1';
 export const STORAGE_KEY_DRIVE_SAFETY_BACKUP = 'transpetro_pre_drive_sync_safety_backup_v1';
 
-export const GOOGLE_DRIVE_DEFAULT_FILE_PREFIX = 'Petrobras_Enfase_Operacao_Jr';
-export const GOOGLE_DRIVE_FILE_NAME = 'Petrobras_Enfase_Operacao_Jr.json';
-export const GOOGLE_DRIVE_ALT_FILE_PREFIX = 'PLATAFORMA TRANSPETRO';
+export const GOOGLE_DRIVE_FILE_NAME = BACKUP_FILE_NAME; // 'PLATAFORMA TRANSPETRO.json'
+export const GOOGLE_DRIVE_DEFAULT_FILE_PREFIX = 'PLATAFORMA TRANSPETRO';
+export const GOOGLE_DRIVE_ALT_FILE_PREFIX = 'Petrobras_Enfase_Operacao_Jr';
+export const GOOGLE_DRIVE_ALT_FILE_NAME = LEGACY_BACKUP_FILE_NAME;
 export const GOOGLE_DRIVE_ACCOUNT_EMAIL = 'marianzo.cs@gmail.com';
 export const GOOGLE_DRIVE_BACKUP_FOLDER = 'backups';
 
-/**
- * Normalizes Google Apps Script URL to always point to the public web app /exec endpoint.
- * Handles cases where:
- * - User copies URL ending with deployment ID without /exec (e.g. .../macros/s/AKfycbx...90U)
- * - User copies URL ending in /edit, /dev, or trailing slashes
- * - User pastes URL with trailing whitespace, quotes or query strings
- */
 export function normalizeAppsScriptUrl(url: string): string {
   if (!url) return '';
   let cleaned = url.trim();
-
-  // Strip wrapping quotes
   cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
-
-  // Strip query parameters (?...) or hash (#...) if present
   cleaned = cleaned.replace(/[?#].*$/, '');
-
-  // Strip trailing slashes
   cleaned = cleaned.replace(/\/+$/, '');
 
-  // Replace /edit or /dev with /exec
   if (cleaned.includes('/edit')) {
     cleaned = cleaned.replace(/\/edit.*$/, '/exec');
   } else if (cleaned.includes('/dev')) {
     cleaned = cleaned.replace(/\/dev.*$/, '/exec');
   } else if (cleaned.includes('/macros/s/') && !cleaned.endsWith('/exec')) {
-    // If it has deployment ID without /exec, append /exec
     cleaned = cleaned + '/exec';
   }
 
@@ -75,6 +77,27 @@ export function setDriveEndpoint(url: string): void {
     localStorage.setItem(STORAGE_KEY_DRIVE_ENDPOINT, url.trim());
   } catch (err) {
     console.error('Error saving drive endpoint', err);
+  }
+}
+
+export function getDriveFileId(): string | null {
+  try {
+    const val = localStorage.getItem(STORAGE_KEY_DRIVE_FILE_ID);
+    return val && val.trim() ? val.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setDriveFileId(fileId: string | null): void {
+  try {
+    if (!fileId || !fileId.trim()) {
+      localStorage.removeItem(STORAGE_KEY_DRIVE_FILE_ID);
+    } else {
+      localStorage.setItem(STORAGE_KEY_DRIVE_FILE_ID, fileId.trim());
+    }
+  } catch (err) {
+    console.error('Error saving drive file id', err);
   }
 }
 
@@ -144,14 +167,14 @@ export function setLastDriveSyncDate(dateStr: string): void {
 
 export function savePreSyncSafetyBackup(): void {
   try {
-    const current = generateBackupPayload();
+    const current = generateCompleteBackupSync().payload;
     localStorage.setItem(STORAGE_KEY_DRIVE_SAFETY_BACKUP, JSON.stringify(current));
   } catch (err) {
     console.error('Error saving safety backup', err);
   }
 }
 
-export function getPreSyncSafetyBackup(): BackupDataPayload | null {
+export function getPreSyncSafetyBackup(): CompleteBackupPayload | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_DRIVE_SAFETY_BACKUP);
     if (raw) {
@@ -169,112 +192,128 @@ export function restorePreSyncSafetyBackup(): { success: boolean; message: strin
     if (!backup) {
       return { success: false, message: 'Nenhum backup de segurança anterior encontrado.' };
     }
-    const res = restoreFromRawData(backup);
+    const res = applyBackupRestoreSync(backup, { preserveCurrentStateInStorage: false });
     if (res.success) {
-      // Remove safety backup once restored
       localStorage.removeItem(STORAGE_KEY_DRIVE_SAFETY_BACKUP);
     }
     return res;
   } catch (e: any) {
-    return { success: false, message: `Erro ao restaurar backup pré-sincronização: ${e?.message || 'Erro'}` };
+    return {
+      success: false,
+      message: `Erro ao restaurar backup pré-sincronização: ${e?.message || 'Erro'}`,
+    };
   }
 }
 
 /**
- * Intelligent safe merge of local and remote data
- * Guarantees zero loss: unions completed days/blocks, merges error notebooks,
- * combines syllabus progress, materials and links.
+ * Mesclagem segura anti-perda entre snapshot local v2.3 e remoto (v2.2 ou v2.3).
  */
 export function mergeTranspetroBackupData(
-  local: BackupDataPayload,
-  remoteRaw: any
-): BackupDataPayload {
-  const remoteData = (remoteRaw && remoteRaw.data) ? remoteRaw.data : (remoteRaw || {});
+  localRaw: CompleteBackupPayload,
+  remoteInput: any
+): CompleteBackupPayload {
+  const local = migrateBackupToCurrent(localRaw).payload;
+  const remote = migrateBackupToCurrent(remoteInput || {}).payload;
+  const localData = local.data;
+  const remoteData = remote.data;
 
   // 1. Completed Days union
-  const localDays: string[] = Array.isArray(local.data?.completedDays) ? local.data.completedDays : [];
-  const remoteDays: string[] = Array.isArray(remoteData.completedDays) ? remoteData.completedDays : [];
-  const mergedDays = Array.from(new Set([...localDays, ...remoteDays])).filter(d => typeof d === 'string' && d.trim().length > 0);
+  const mergedDays = Array.from(
+    new Set([...(localData.completedDays || []), ...(remoteData.completedDays || [])])
+  ).filter((d) => typeof d === 'string' && d.trim().length > 0);
 
   // 2. Completed Blocks union
-  const localBlocks: string[] = Array.isArray(local.data?.completedBlocks) ? local.data.completedBlocks : [];
-  const remoteBlocks: string[] = Array.isArray(remoteData.completedBlocks) ? remoteData.completedBlocks : [];
-  const mergedBlocks = Array.from(new Set([...localBlocks, ...remoteBlocks])).filter(b => typeof b === 'string' && b.trim().length > 0);
+  const mergedBlocks = Array.from(
+    new Set([...(localData.completedBlocks || []), ...(remoteData.completedBlocks || [])])
+  ).filter((b) => typeof b === 'string' && b.trim().length > 0);
 
-  // 3. Error Notebook deduplication
-  const localErrors: any[] = Array.isArray(local.data?.errorNotebook) ? local.data.errorNotebook : [];
-  const remoteErrors: any[] = Array.isArray(remoteData.errorNotebook) ? remoteData.errorNotebook : [];
+  // 3. Error Notebook deduplication (preserva remotos + edits locais)
   const errorMap = new Map<string, any>();
-
-  // Add remote first
-  remoteErrors.forEach(item => {
+  (remoteData.errorNotebook || []).forEach((item) => {
     if (!item) return;
-    const key = String(item.id || item.timestamp || item.enunciado || item.pergunta || JSON.stringify(item));
+    const key = String(item.id || item.timestamp || item.enunciado || item.subtopico || JSON.stringify(item));
     errorMap.set(key, item);
   });
-  // Add local (so local edits take precedence while remote items are preserved)
-  localErrors.forEach(item => {
+  (localData.errorNotebook || []).forEach((item) => {
     if (!item) return;
-    const key = String(item.id || item.timestamp || item.enunciado || item.pergunta || JSON.stringify(item));
+    const key = String(item.id || item.timestamp || item.enunciado || item.subtopico || JSON.stringify(item));
     errorMap.set(key, item);
   });
   const mergedErrorNotebook = Array.from(errorMap.values());
 
   // 4. Vertical Syllabus Progress merge
-  const localVertical = (local.data?.verticalSyllabusProgress && typeof local.data.verticalSyllabusProgress === 'object')
-    ? local.data.verticalSyllabusProgress
-    : {};
-  const remoteVertical = (remoteData.verticalSyllabusProgress && typeof remoteData.verticalSyllabusProgress === 'object')
-    ? remoteData.verticalSyllabusProgress
-    : {};
-
-  const allVerticalKeys = new Set([...Object.keys(localVertical), ...Object.keys(remoteVertical)]);
+  const localVertical = localData.verticalSyllabusProgress || {};
+  const remoteVertical = remoteData.verticalSyllabusProgress || {};
+  const allVerticalKeys = new Set([
+    ...Object.keys(localVertical),
+    ...Object.keys(remoteVertical),
+  ]);
   const mergedVerticalProgress: Record<string, any> = {};
 
-  allVerticalKeys.forEach(key => {
+  allVerticalKeys.forEach((key) => {
     const lVal = localVertical[key];
     const rVal = remoteVertical[key];
-
-    if (!lVal) {
-      mergedVerticalProgress[key] = rVal;
-    } else if (!rVal) {
-      mergedVerticalProgress[key] = lVal;
-    } else if (typeof lVal === 'object' && typeof rVal === 'object') {
+    if (!lVal) mergedVerticalProgress[key] = rVal;
+    else if (!rVal) mergedVerticalProgress[key] = lVal;
+    else if (typeof lVal === 'object' && typeof rVal === 'object') {
       mergedVerticalProgress[key] = {
         ...rVal,
         ...lVal,
-        estudado: Boolean(lVal.estudado || rVal.estudado),
         teoria: Boolean(lVal.teoria || rVal.teoria),
+        questoes: Boolean(lVal.questoes || rVal.questoes),
+        revisao: Boolean(lVal.revisao || rVal.revisao),
         revisado: Boolean(lVal.revisado || rVal.revisado),
-        questoes: Math.max(Number(lVal.questoes) || 0, Number(rVal.questoes) || 0),
+        estudado: Boolean(lVal.estudado || rVal.estudado),
+        questoesFeitas: Math.max(Number(lVal.questoesFeitas) || 0, Number(rVal.questoesFeitas) || 0),
+        questoesAcertos: Math.max(Number(lVal.questoesAcertos) || 0, Number(rVal.questoesAcertos) || 0),
         acertos: Math.max(Number(lVal.acertos) || 0, Number(rVal.acertos) || 0),
-        erros: Math.max(Number(lVal.erros) || 0, Number(rVal.erros) || 0)
+        erros: Math.max(Number(lVal.erros) || 0, Number(rVal.erros) || 0),
       };
     } else {
       mergedVerticalProgress[key] = lVal || rVal;
     }
   });
 
-  // 5. Custom Materials
-  const localMaterials = (local.data?.customMaterials && typeof local.data.customMaterials === 'object')
-    ? local.data.customMaterials
-    : {};
-  const remoteMaterials = (remoteData.customMaterials && typeof remoteData.customMaterials === 'object')
-    ? remoteData.customMaterials
-    : {};
-  const mergedCustomMaterials = { ...remoteMaterials, ...localMaterials };
+  // 5. Custom Materials (preserva mapas mentais de ambos por ID)
+  const localMaterials = localData.customMaterials || {};
+  const remoteMaterials = remoteData.customMaterials || {};
+  const allMatKeys = new Set([...Object.keys(localMaterials), ...Object.keys(remoteMaterials)]);
+  const mergedCustomMaterials: Record<string, any> = {};
+
+  allMatKeys.forEach((secId) => {
+    const lSec = localMaterials[secId];
+    const rSec = remoteMaterials[secId];
+    if (!lSec) {
+      mergedCustomMaterials[secId] = rSec;
+      return;
+    }
+    if (!rSec) {
+      mergedCustomMaterials[secId] = lSec;
+      return;
+    }
+    const mapById = new Map<string, any>();
+    (Array.isArray(rSec.mindMaps) ? rSec.mindMaps : []).forEach((m: any) => {
+      if (m?.id) mapById.set(String(m.id), m);
+    });
+    (Array.isArray(lSec.mindMaps) ? lSec.mindMaps : []).forEach((m: any) => {
+      if (m?.id) mapById.set(String(m.id), m);
+    });
+    mergedCustomMaterials[secId] = {
+      ...rSec,
+      ...lSec,
+      notes: lSec.notes && String(lSec.notes).trim() ? lSec.notes : rSec.notes || '',
+      mindMaps: Array.from(mapById.values()),
+    };
+  });
 
   // 6. Material Links
-  const localLinks: any[] = Array.isArray(local.data?.materialLinks) ? local.data.materialLinks : [];
-  const remoteLinks: any[] = Array.isArray(remoteData.materialLinks) ? remoteData.materialLinks : [];
   const linkMap = new Map<string, any>();
-
-  remoteLinks.forEach(link => {
+  (remoteData.materialLinks || []).forEach((link) => {
     if (!link) return;
     const key = String(link.url || link.id || link.titulo || JSON.stringify(link));
     linkMap.set(key, link);
   });
-  localLinks.forEach(link => {
+  (localData.materialLinks || []).forEach((link) => {
     if (!link) return;
     const key = String(link.url || link.id || link.titulo || JSON.stringify(link));
     linkMap.set(key, link);
@@ -282,39 +321,27 @@ export function mergeTranspetroBackupData(
   const mergedMaterialLinks = Array.from(linkMap.values());
 
   // 7. Schedule Day Notes
-  const localNotes = (local.data?.scheduleDayNotes && typeof local.data.scheduleDayNotes === 'object')
-    ? local.data.scheduleDayNotes
-    : {};
-  const remoteNotes = (remoteData.scheduleDayNotes && typeof remoteData.scheduleDayNotes === 'object')
-    ? remoteData.scheduleDayNotes
-    : {};
-  const mergedNotes: Record<string, string> = { ...remoteNotes };
-  Object.entries(localNotes).forEach(([dayId, noteText]) => {
+  const mergedNotes: Record<string, string> = { ...(remoteData.scheduleDayNotes || {}) };
+  Object.entries(localData.scheduleDayNotes || {}).forEach(([dayId, noteText]) => {
     if (noteText && String(noteText).trim()) {
       mergedNotes[dayId] = noteText;
     }
   });
 
   // 8. Banca Notes
-  const localBanca = (local.data?.bancaNotes && typeof local.data.bancaNotes === 'object')
-    ? local.data.bancaNotes
-    : {};
-  const remoteBanca = (remoteData.bancaNotes && typeof remoteData.bancaNotes === 'object')
-    ? remoteData.bancaNotes
-    : {};
-  const mergedBancaNotes = { ...remoteBanca, ...localBanca };
+  const mergedBancaNotes = {
+    ...(remoteData.bancaNotes || {}),
+    ...(localData.bancaNotes || {}),
+  };
 
-  // 9. Pomodoro Focus Logs (união deduplicada por id)
-  const localFocusLogs = Array.isArray(local.data?.pomodoroFocusLogs)
-    ? local.data.pomodoroFocusLogs
-    : [];
-  const remoteFocusLogs = Array.isArray(remoteData.pomodoroFocusLogs)
-    ? remoteData.pomodoroFocusLogs
-    : [];
-  const mergedFocusLogs = deduplicateFocusLogs([...remoteFocusLogs, ...localFocusLogs]);
+  // 9. Focus Logs
+  const mergedFocusLogs = deduplicateFocusLogs([
+    ...(remoteData.pomodoroFocusLogs || []),
+    ...(localData.pomodoroFocusLogs || []),
+  ]);
 
-  // 10. Study Resume State (preserva o mais recente por updatedAt)
-  const localResume = local.data?.studyResumeState as StudyResumeState | null | undefined;
+  // 10. Study Resume State
+  const localResume = localData.studyResumeState as StudyResumeState | null | undefined;
   const remoteResume = remoteData.studyResumeState as StudyResumeState | null | undefined;
   let mergedResumeState: StudyResumeState | null = localResume || remoteResume || null;
   if (localResume && remoteResume) {
@@ -324,9 +351,9 @@ export function mergeTranspetroBackupData(
         : remoteResume;
   }
 
-  // 11. Pomodoro Active State (mais recente por lastCheckpointAt, sempre normalizado pausado)
+  // 11. Pomodoro Active State
   const localActive = normalizeRestoredPomodoroOnAppOpen(
-    (local.data?.pomodoroActiveState as PomodoroActiveState | null | undefined) || null
+    (localData.pomodoroActiveState as PomodoroActiveState | null | undefined) || null
   );
   const remoteActive = normalizeRestoredPomodoroOnAppOpen(
     (remoteData.pomodoroActiveState as PomodoroActiveState | null | undefined) || null
@@ -341,28 +368,108 @@ export function mergeTranspetroBackupData(
 
   // 12. Calendar Selected Date
   const mergedCalendarSelectedDate =
-    typeof local.data?.calendarSelectedDate === 'string' && local.data.calendarSelectedDate.trim()
-      ? local.data.calendarSelectedDate
+    typeof localData.calendarSelectedDate === 'string' && localData.calendarSelectedDate.trim()
+      ? localData.calendarSelectedDate
       : typeof remoteData.calendarSelectedDate === 'string' && remoteData.calendarSelectedDate.trim()
       ? remoteData.calendarSelectedDate
       : undefined;
 
-  // 13. Other Storage Keys
-  const localOther = (local.data?.otherStorageKeys && typeof local.data.otherStorageKeys === 'object')
-    ? local.data.otherStorageKeys
-    : {};
-  const remoteOther = (remoteData.otherStorageKeys && typeof remoteData.otherStorageKeys === 'object')
-    ? remoteData.otherStorageKeys
-    : {};
-  const mergedOther = { ...remoteOther, ...localOther };
+  // 13. Mesclar mapa completo de localStorage (áreas custom, simulador, filtros, configurações, chaves extras)
+  const mergedLocalStorage: Record<string, unknown> = {
+    ...(remoteData.localStorage || {}),
+    ...(localData.localStorage || {}),
+    [STORAGE_KEYS.VERTICAL_SYLLABUS]: mergedVerticalProgress,
+    [STORAGE_KEYS.ERROR_NOTEBOOK]: mergedErrorNotebook,
+    [STORAGE_KEYS.CUSTOM_MATERIALS]: mergedCustomMaterials,
+    [STORAGE_KEYS.MATERIAL_LINKS]: mergedMaterialLinks,
+    [STORAGE_KEYS.SCHEDULE_DAY_NOTES]: mergedNotes,
+    [STORAGE_KEYS.FOCUS_LOGS]: mergedFocusLogs,
+  };
+
+  if (mergedActiveState) {
+    mergedLocalStorage[STORAGE_KEYS.POMODORO_ACTIVE_STATE] = mergedActiveState;
+  } else {
+    delete mergedLocalStorage[STORAGE_KEYS.POMODORO_ACTIVE_STATE];
+  }
+  if (mergedResumeState) {
+    mergedLocalStorage[STORAGE_KEYS.STUDY_RESUME_STATE] = mergedResumeState;
+  }
+  if (mergedCalendarSelectedDate) {
+    mergedLocalStorage[STORAGE_KEYS.CALENDAR_SELECTED_DATE] = mergedCalendarSelectedDate;
+  }
+  if (mergedDays.length > 0) {
+    mergedLocalStorage[STORAGE_KEYS.COMPLETED_DAYS] = mergedDays;
+  }
+  if (mergedBlocks.length > 0) {
+    mergedLocalStorage[STORAGE_KEYS.COMPLETED_BLOCKS] = mergedBlocks;
+  }
+  if (Object.keys(mergedBancaNotes).length > 0) {
+    mergedLocalStorage[STORAGE_KEYS.BANCA_NOTES] = mergedBancaNotes;
+  }
+
+  // Remover chaves excluídas caso existam
+  EXCLUDED_STORAGE_KEYS.forEach((k) => {
+    delete mergedLocalStorage[k];
+  });
+
+  const mergedOther = {
+    ...(remoteData.otherStorageKeys || {}),
+    ...(localData.otherStorageKeys || {}),
+  };
+  EXCLUDED_STORAGE_KEYS.forEach((k) => {
+    delete mergedOther[k];
+  });
+
+  const mergedUnknownFields = {
+    ...(remoteData.unknownFields || {}),
+    ...(localData.unknownFields || {}),
+  };
 
   const now = new Date();
-  return {
-    version: '2.3',
-    app: 'Transpetro & Petrobras - Guia Técnico Mesclado (Dutos e Terminais + Operação)',
+  const mergedPayload: CompleteBackupPayload = {
+    version: BACKUP_SCHEMA_VERSION,
+    app: local.app,
     exportTimestamp: now.toISOString(),
     exportDateFormatted: now.toLocaleString('pt-BR'),
+    metadata: {
+      ...local.metadata,
+      backupVersion: BACKUP_SCHEMA_VERSION,
+      createdAt: now.toISOString(),
+      createdAtFormatted: now.toLocaleString('pt-BR'),
+      complete: true,
+    },
+    manifest: {
+      ...local.manifest,
+      exportedKeys: Object.keys(mergedLocalStorage),
+    },
     data: {
+      localStorage: mergedLocalStorage,
+      sessionStorage: {},
+      indexedDB: {},
+      modules: {
+        ...(remoteData.modules || {}),
+        ...(localData.modules || {}),
+        edital_verticalizado: mergedVerticalProgress,
+        caderno_erros: mergedErrorNotebook,
+        material_estudo_custom: mergedCustomMaterials,
+        material_links: mergedMaterialLinks,
+        cronograma_notas: mergedNotes,
+        foco_logs: mergedFocusLogs,
+        pomodoro_ativo: mergedActiveState,
+        retomada_estudo: mergedResumeState,
+      },
+      settings: {
+        ...(remoteData.settings || {}),
+        ...(localData.settings || {}),
+      },
+      legacy: {
+        completedDays: mergedDays,
+        completedBlocks: mergedBlocks,
+        bancaNotes: mergedBancaNotes,
+      },
+      ...(Object.keys(mergedUnknownFields).length > 0
+        ? { unknownFields: mergedUnknownFields }
+        : {}),
       completedDays: mergedDays,
       completedBlocks: mergedBlocks,
       errorNotebook: mergedErrorNotebook,
@@ -375,20 +482,39 @@ export function mergeTranspetroBackupData(
       pomodoroActiveState: mergedActiveState,
       studyResumeState: mergedResumeState,
       calendarSelectedDate: mergedCalendarSelectedDate,
-      otherStorageKeys: mergedOther
-    }
+      otherStorageKeys: mergedOther,
+    },
   };
+
+  const report = validateBackupPayloadStructure(mergedPayload);
+  mergedPayload.metadata.complete = report.complete;
+  mergedPayload.manifest.recordCounts = report.recordCountsByModule;
+  mergedPayload.manifest.totalRecords = report.totalRecords;
+  mergedPayload.manifest.validation = {
+    valid: report.valid,
+    complete: report.complete,
+    warnings: report.warnings,
+    errors: report.errors,
+  };
+  const canonical = buildIntegrityCanonicalTarget(mergedPayload);
+  const digest = computeSyncDigest(canonical);
+  mergedPayload.integrity = {
+    algorithm: 'SHA-256',
+    sha256: `fnv-${digest}`,
+    syncDigest: digest,
+  };
+
+  return mergedPayload;
 }
 
 /**
- * Fetch Google Drive JSON via JSONP with safe memory script creation, URL auto-normalization, and timeout
+ * Fetch Google Drive JSON via JSONP (com captura automática de fileId quando disponível)
  */
 export function fetchGoogleDriveDataViaJsonp(
   endpoint: string,
   onStatusChange?: (statusText: string) => void
 ): Promise<any> {
   return new Promise((resolve, reject) => {
-    // Automatically sanitize and ensure /exec endpoint
     const normalized = normalizeAppsScriptUrl(endpoint);
 
     if (!normalized || !normalized.startsWith('https://script.google.com/')) {
@@ -397,7 +523,6 @@ export function fetchGoogleDriveDataViaJsonp(
       return reject(new Error(err));
     }
 
-    // Persist normalized endpoint if it was cleaned
     if (normalized !== endpoint) {
       setDriveEndpoint(normalized);
     }
@@ -425,28 +550,36 @@ export function fetchGoogleDriveDataViaJsonp(
     const script = document.createElement('script');
     scriptAtual = script;
 
-    (window as any)[nomeCallback] = (dados: any) => {
+    (window as any)[nomeCallback] = (resposta: any) => {
       limpar();
 
-      if (!dados || typeof dados !== 'object') {
+      if (!resposta || typeof resposta !== 'object') {
         const msg = 'O JSON recebido do Google Drive é inválido.';
         if (onStatusChange) onStatusChange(msg);
         return reject(new Error(msg));
       }
 
-      if (dados.error) {
-        const msg = dados.error;
+      if (resposta.error) {
+        const msg = resposta.error;
         if (onStatusChange) onStatusChange(msg);
         return reject(new Error(msg));
       }
 
+      // Desembrulha envelope v2.3 { __driveEnvelope: true, fileId, fileName, payload }
+      let dados = resposta;
+      if (resposta.__driveEnvelope && resposta.payload && typeof resposta.payload === 'object') {
+        if (typeof resposta.fileId === 'string' && resposta.fileId.trim()) {
+          setDriveFileId(resposta.fileId);
+        }
+        dados = resposta.payload;
+      }
+
       if (onStatusChange) onStatusChange('Dados recebidos. Integrando...');
 
-      // Dispatch integration event required by the specification
       try {
         window.dispatchEvent(
           new CustomEvent('drive-json-loaded', {
-            detail: dados
+            detail: dados,
           })
         );
       } catch (err) {
@@ -472,17 +605,21 @@ export function fetchGoogleDriveDataViaJsonp(
 
     timeoutAtual = setTimeout(() => {
       limpar();
-      const msg = 'Tempo esgotado ao contatar Google Apps Script. Verifique sua conexão e tente novamente.';
+      const msg =
+        'Tempo esgotado ao contatar Google Apps Script. Verifique sua conexão e tente novamente.';
       if (onStatusChange) onStatusChange(msg);
       reject(new Error(msg));
     }, 16000);
 
+    const knownFileId = getDriveFileId();
     const separador = normalized.includes('?') ? '&' : '?';
     script.src =
       normalized +
       separador +
       'callback=' +
       encodeURIComponent(nomeCallback) +
+      '&envelope=1' +
+      (knownFileId ? '&fileId=' + encodeURIComponent(knownFileId) : '') +
       '&_=' +
       Date.now();
 
@@ -499,8 +636,9 @@ export function buildDevicePairingLink(baseUrl: string, endpoint: string): strin
 
 export async function pushBackupToGoogleDrive(
   endpoint: string,
-  onStatusChange?: (statusText: string) => void
-): Promise<{ success: boolean; message: string }> {
+  onStatusChange?: (statusText: string) => void,
+  options?: { allowCreateIfMissing?: boolean }
+): Promise<{ success: boolean; message: string; fileId?: string }> {
   const normalized = normalizeAppsScriptUrl(endpoint);
   if (!normalized || !normalized.startsWith('https://script.google.com/')) {
     const errMsg = 'Configure a URL do Apps Script (deve iniciar com https://script.google.com/).';
@@ -512,62 +650,93 @@ export async function pushBackupToGoogleDrive(
     setDriveEndpoint(normalized);
   }
 
-  onStatusChange?.('Enviando dados locais para o Google Drive...');
-  const payload = generateBackupPayload();
+  onStatusChange?.('Validando integridade do backup completo (SHA-256)...');
+  const validatedBundle = await generateValidatedBackupAsync();
 
+  const knownFileId = getDriveFileId();
+  const requestEnvelope = {
+    __driveWriteRequest: true,
+    targetFileId: knownFileId,
+    expectedFileName: GOOGLE_DRIVE_FILE_NAME,
+    expectedFolder: GOOGLE_DRIVE_BACKUP_FOLDER,
+    allowCreateIfMissing: options?.allowCreateIfMissing ?? !knownFileId,
+    payload: validatedBundle.payload,
+  };
+
+  onStatusChange?.('Enviando backup validado para o Google Drive...');
   const response = await fetch(normalized, {
     method: 'POST',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(requestEnvelope),
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao enviar dados (${response.status}). Confira a implantação do Apps Script.`);
+    throw new Error(
+      `Falha ao enviar dados (${response.status}). Confira a implantação do Apps Script.`
+    );
   }
 
-  let message = `Arquivo "${GOOGLE_DRIVE_FILE_NAME}" salvo com sucesso no Google Drive!`;
+  const rawText = await response.text();
+  let data: any;
   try {
-    const data = await response.json();
-    if (data && data.success === false) {
-      throw new Error(data.error || 'Erro ao gravar arquivo no Google Drive.');
-    }
-    if (data?.message) {
-      message = data.message;
-    }
-  } catch (err: any) {
-    if (err?.message && err.name !== 'SyntaxError') {
-      throw err;
-    }
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(
+      'O Apps Script retornou uma resposta inesperada (não-JSON). Verifique se a implantação está publicada para "Qualquer pessoa" e utilizando o Código.gs atualizado.'
+    );
   }
+
+  if (!data || data.success !== true) {
+    throw new Error(
+      data?.error || 'O Google Apps Script recusou ou falhou ao gravar o arquivo no Google Drive.'
+    );
+  }
+
+  if (typeof data.fileId === 'string' && data.fileId.trim()) {
+    setDriveFileId(data.fileId);
+  }
+
+  const message =
+    data.message ||
+    `Arquivo "${GOOGLE_DRIVE_BACKUP_FOLDER}/${GOOGLE_DRIVE_FILE_NAME}" atualizado com sucesso no Google Drive!`;
 
   setDriveSyncValidated(true);
   setLastDriveSyncDate(new Date().toLocaleString('pt-BR'));
   onStatusChange?.(message);
-  return { success: true, message };
+
+  return {
+    success: true,
+    message,
+    fileId: typeof data.fileId === 'string' ? data.fileId : knownFileId || undefined,
+  };
 }
 
 export async function syncBidirectionalWithGoogleDrive(
   endpoint: string,
   onStatusChange?: (statusText: string) => void
 ): Promise<void> {
+  let foundExistingRemote = false;
   try {
     await fetchGoogleDriveDataViaJsonp(endpoint, onStatusChange);
+    foundExistingRemote = true;
   } catch (err: any) {
     const msg = String(err?.message || '');
     if (!msg.includes('não foi encontrado') && !msg.includes('Nenhum arquivo')) {
       throw err;
     }
-    onStatusChange?.('Nenhum backup prévio no Drive. Criando backup inicial...');
+    onStatusChange?.('Nenhum backup prévio localizado no Drive. Criando arquivo inicial...');
   }
 
-  await pushBackupToGoogleDrive(endpoint, onStatusChange);
+  await pushBackupToGoogleDrive(endpoint, onStatusChange, {
+    allowCreateIfMissing: !foundExistingRemote && !getDriveFileId(),
+  });
 }
 
 /**
  * Retorna o código do Google Apps Script configurado para a conta marianzo.cs@gmail.com
- * e para a pasta "backups" do Google Drive ("backups/Petrobras_Enfase_Operacao_Jr.json").
+ * e para a pasta "backups" com atualização determinística pelo ID do arquivo existente.
  */
 export function getGoogleAppsScriptTemplate(
   targetFileName: string = GOOGLE_DRIVE_FILE_NAME,
@@ -575,27 +744,26 @@ export function getGoogleAppsScriptTemplate(
   targetAccountEmail: string = GOOGLE_DRIVE_ACCOUNT_EMAIL
 ): string {
   return `// ============================================================================
-// GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PETROBRAS ÊNFASE OPERAÇÃO JR
+// GOOGLE APPS SCRIPT — SINCRONIZAÇÃO PETROBRAS PARETO RECURSIVO
 // Conta Google: ${targetAccountEmail}
 // Pasta no Google Drive: "${targetFolderName}"
-// Arquivo no Google Drive: "${targetFolderName}/${targetFileName}"
+// Arquivo padrão no Google Drive: "${targetFolderName}/${targetFileName}"
 // ============================================================================
 //
-// PASSO A PASSO PARA ATIVAR EM MENOS DE 2 MINUTOS:
+// PASSO A PASSO PARA ATIVAR / ATUALIZAR:
 // 1. Faça login em https://script.google.com usando a conta ${targetAccountEmail}
-// 2. Clique em "+ Novo projeto", apague o código padrão e cole este script completo
-// 3. Salve (Ctrl+S) e clique no botão azul "Implantar" > "Nova implantação"
+// 2. Cole este script completo em Código.gs e salve (Ctrl+S)
+// 3. Clique em "Implantar" > "Gerenciar implantações" > Editar > "Nova versão" (ou "Nova implantação")
 // 4. Configure:
-//    - Tipo (engrenagem): "Aplicativo da Web"
-//    - Descrição: "Sincronizador Petrobras Enfase Operacao Jr (${targetFolderName})"
+//    - Tipo: "Aplicativo da Web"
 //    - Executar como: "Eu (${targetAccountEmail})"
-//    - QUEM TEM ACESSO: "Qualquer pessoa" (OBRIGATÓRIO para evitar bloqueio CORS/acesso)
-// 5. Clique em "Implantar", autorize o acesso ao Drive da conta ${targetAccountEmail} e COPIE a URL /exec
-// 6. Cole a URL /exec no aplicativo!
+//    - QUEM TEM ACESSO: "Qualquer pessoa"
+// 5. Autorize o acesso ao Drive e cole a URL /exec no aplicativo!
 // ============================================================================
 
 var TARGET_FOLDER_NAME = "${targetFolderName}";
 var TARGET_FILE_NAME = "${targetFileName}";
+var LEGACY_FILE_NAME = "${LEGACY_BACKUP_FILE_NAME}";
 var EXPECTED_ACCOUNT = "${targetAccountEmail}";
 
 function findBackupFolder() {
@@ -623,16 +791,16 @@ function collectMatchingFiles(fileIterator, matchingFiles) {
     var name = file.getName().trim();
     var lower = name.toLowerCase();
 
-    var isExact = (lower === "petrobras_enfase_operacao_jr.json" || lower === "petrobras_enfase_operacao_jr");
-    var startsWith = (lower.indexOf("petrobras_enfase_operacao_jr") === 0);
-    var contains = (lower.indexOf("operacao") !== -1 && lower.indexOf("petrobras") !== -1) ||
-                   (lower === "plataforma transpetro.json" || lower.indexOf("plataforma transpetro") === 0);
+    var isPrimaryExact = (lower === TARGET_FILE_NAME.toLowerCase());
+    var isLegacyExact = (lower === LEGACY_FILE_NAME.toLowerCase() || lower === "petrobras_enfase_operacao_jr");
+    var startsWith = (lower.indexOf("plataforma transpetro") === 0 || lower.indexOf("petrobras_enfase_operacao_jr") === 0);
 
-    if (isExact || startsWith || contains) {
+    if (isPrimaryExact || isLegacyExact || startsWith) {
       matchingFiles.push({
         file: file,
         name: name,
-        isExact: isExact,
+        isExact: isPrimaryExact || isLegacyExact,
+        isPrimary: isPrimaryExact,
         startsWith: startsWith,
         updated: file.getLastUpdated().getTime()
       });
@@ -640,10 +808,20 @@ function collectMatchingFiles(fileIterator, matchingFiles) {
   }
 }
 
-function doGet(e) {
-  var matchingFiles = [];
+function findBestExistingBackupFile(preferredFileId) {
+  if (preferredFileId) {
+    try {
+      var byId = DriveApp.getFileById(preferredFileId);
+      if (byId && !byId.isTrashed()) {
+        return { file: byId, foundById: true };
+      }
+      return { file: null, foundById: false, missingRequestedId: true };
+    } catch (idErr) {
+      return { file: null, foundById: false, missingRequestedId: true };
+    }
+  }
 
-  // 1. Busca prioritária dentro da pasta "backups" da conta ${targetAccountEmail}
+  var matchingFiles = [];
   try {
     var backupFolder = findBackupFolder();
     if (backupFolder) {
@@ -651,13 +829,11 @@ function doGet(e) {
     }
   } catch (errFolder) {}
 
-  // 2. Fallback: busca na raiz/Drive caso o arquivo ainda esteja fora da pasta "backups"
   if (matchingFiles.length === 0) {
     try {
       var searchQueries = [
-        "title contains 'Petrobras_Enfase_Operacao_Jr' and trashed = false",
-        "title contains 'petrobras_enfase_operacao_jr' and trashed = false",
-        "title contains 'PLATAFORMA TRANSPETRO' and trashed = false"
+        "title contains 'PLATAFORMA TRANSPETRO' and trashed = false",
+        "title contains 'Petrobras_Enfase_Operacao_Jr' and trashed = false"
       ];
       for (var i = 0; i < searchQueries.length; i++) {
         collectMatchingFiles(DriveApp.searchFiles(searchQueries[i]), matchingFiles);
@@ -667,24 +843,44 @@ function doGet(e) {
   }
 
   if (matchingFiles.length === 0) {
+    return { file: null, foundById: false, missingRequestedId: false };
+  }
+
+  matchingFiles.sort(function(a, b) {
+    if (a.isPrimary && !b.isPrimary) return -1;
+    if (!a.isPrimary && b.isPrimary) return 1;
+    if (a.isExact && !b.isExact) return -1;
+    if (!a.isExact && b.isExact) return 1;
+    return b.updated - a.updated;
+  });
+
+  return { file: matchingFiles[0].file, foundById: false, missingRequestedId: false };
+}
+
+function doGet(e) {
+  var requestedFileId = (e && e.parameter && e.parameter.fileId) || "";
+  var useEnvelope = (e && e.parameter && e.parameter.envelope === "1");
+  var lookup = findBestExistingBackupFile(requestedFileId);
+
+  if (!lookup.file) {
     return outputResponse(e, {
       error: "Nenhum arquivo '" + TARGET_FILE_NAME + "' foi encontrado na pasta '" + TARGET_FOLDER_NAME + "' do Google Drive (" + EXPECTED_ACCOUNT + ")."
     });
   }
 
-  matchingFiles.sort(function(a, b) {
-    if (a.isExact && !b.isExact) return -1;
-    if (!a.isExact && b.isExact) return 1;
-    if (a.startsWith && !b.startsWith) return -1;
-    if (!a.startsWith && b.startsWith) return 1;
-    return b.updated - a.updated;
-  });
-
-  var selected = matchingFiles[0].file;
-
+  var selected = lookup.file;
   try {
     var content = selected.getBlob().getDataAsString("UTF-8");
     var parsed = JSON.parse(content);
+    if (useEnvelope) {
+      return outputResponse(e, {
+        __driveEnvelope: true,
+        fileId: selected.getId(),
+        fileName: selected.getName(),
+        folder: TARGET_FOLDER_NAME,
+        payload: parsed
+      });
+    }
     return outputResponse(e, parsed);
   } catch (parseErr) {
     return outputResponse(e, {
@@ -693,33 +889,61 @@ function doGet(e) {
   }
 }
 
-// Salva ou atualiza diretamente dentro da pasta "backups" do Google Drive
 function doPost(e) {
   try {
-    var content = (e && e.postData && e.postData.contents) ? e.postData.contents : "";
-    if (!content) {
+    var rawBody = (e && e.postData && e.postData.contents) ? e.postData.contents : "";
+    if (!rawBody) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Nenhum dado recebido no POST." }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    JSON.parse(content);
+    var bodyObj = JSON.parse(rawBody);
+    var targetFileId = null;
+    var allowCreateIfMissing = false;
+    var payloadToSave = bodyObj;
 
-    var folder = getOrCreateBackupFolder();
-    var filesInFolder = folder.getFilesByName(TARGET_FILE_NAME);
-    var targetFile;
+    if (bodyObj && bodyObj.__driveWriteRequest && bodyObj.payload) {
+      targetFileId = bodyObj.targetFileId || null;
+      allowCreateIfMissing = Boolean(bodyObj.allowCreateIfMissing);
+      payloadToSave = bodyObj.payload;
+    }
 
-    if (filesInFolder.hasNext()) {
-      targetFile = filesInFolder.next();
-      targetFile.setContent(content);
+    var contentToSave = JSON.stringify(payloadToSave, null, 2);
+    var lookup = findBestExistingBackupFile(targetFileId);
+
+    if (lookup.missingRequestedId) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "FILE_NOT_FOUND",
+        error: "O arquivo original (ID: " + targetFileId + ") não foi encontrado no Google Drive. Operação interrompida para evitar duplicatas."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var targetFile = lookup.file;
+    var folderName = TARGET_FOLDER_NAME;
+
+    if (targetFile) {
+      // Substitui o conteúdo do mesmo arquivo preservando o ID original
+      targetFile.setContent(contentToSave);
     } else {
-      targetFile = folder.createFile(TARGET_FILE_NAME, content, MimeType.PLAIN_TEXT);
+      if (!allowCreateIfMissing) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          code: "FILE_NOT_FOUND",
+          error: "Arquivo '" + TARGET_FILE_NAME + "' não encontrado na pasta '" + TARGET_FOLDER_NAME + "'. Nenhuma cópia duplicada foi criada."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var folder = getOrCreateBackupFolder();
+      folderName = folder.getName();
+      targetFile = folder.createFile(TARGET_FILE_NAME, contentToSave, MimeType.PLAIN_TEXT);
     }
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: "Arquivo '" + TARGET_FOLDER_NAME + "/" + TARGET_FILE_NAME + "' salvo com sucesso no Google Drive (" + EXPECTED_ACCOUNT + ")!",
+      message: "Arquivo '" + targetFile.getName() + "' atualizado com sucesso no Google Drive (" + EXPECTED_ACCOUNT + ")!",
       account: EXPECTED_ACCOUNT,
-      folder: folder.getName(),
+      folder: folderName,
+      fileId: targetFile.getId(),
       fileName: targetFile.getName(),
       updated: targetFile.getLastUpdated().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
@@ -730,7 +954,6 @@ function doPost(e) {
   }
 }
 
-// Formatação da resposta: JSONP (se houver parâmetro callback) ou JSON padrão
 function outputResponse(e, data) {
   var callback = (e && e.parameter && e.parameter.callback) || "";
   if (callback) {

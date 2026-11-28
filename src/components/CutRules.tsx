@@ -60,7 +60,7 @@ export const CutRules: React.FC = () => {
                 type="button"
                 aria-pressed={selectedOrigin === opt.id}
                 onClick={() => setSelectedOrigin(opt.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`btn-tactile px-3 py-1.5 rounded-xl text-xs font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer ${
                   selectedOrigin === opt.id
                     ? 'bg-[#071F14] text-[#FDB913] border-b-2 border-orange-500'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

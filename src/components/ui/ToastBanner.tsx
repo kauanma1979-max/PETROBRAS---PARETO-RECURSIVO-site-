@@ -32,7 +32,7 @@ export const ToastBanner: React.FC<ToastBannerProps> = ({
     <div
       role="status"
       aria-live="polite"
-      className={`px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 animate-fadeIn ${styles} ${className}`}
+      className={`toast-enter px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-2xs ${styles} ${className}`}
     >
       <Icon className={`w-4 h-4 shrink-0 ${iconColor}`} aria-hidden="true" />
       <span>{message}</span>

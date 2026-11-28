@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { BANCA_PROFILE, PARES_CONCEITUAIS_IRMAOS } from '../data/bancaData';
 import { Card, StatusBadge, Button, EmptyState, OriginBadge, SubjectBaseBadge } from './ui';
 import type { OrigemEdital } from './ui/OriginBadge';
@@ -15,12 +17,46 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
+gsap.registerPlugin(useGSAP);
+
 export const BancaCesgranrio: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('todas');
   const [selectedOrigin, setSelectedOrigin] = useState<'todas' | OrigemEdital>('todas');
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [showDistractors, setShowDistractors] = useState<boolean>(false);
+  const distractorsRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!showDistractors) return;
+      const mm = gsap.matchMedia();
+
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.from('.distractor-card', {
+          y: 6,
+          scale: 0.98,
+          autoAlpha: 0,
+          duration: 0.22,
+          stagger: 0.03,
+          ease: 'power3.out',
+          clearProps: 'transform,opacity,visibility',
+        });
+      });
+
+      mm.add('(prefers-reduced-motion: reduce)', () => {
+        gsap.from('.distractor-card', {
+          autoAlpha: 0,
+          duration: 0.16,
+          ease: 'power1.out',
+          clearProps: 'opacity,visibility',
+        });
+      });
+
+      return () => mm.revert();
+    },
+    { scope: distractorsRef, dependencies: [showDistractors] }
+  );
 
   const orderedParesBase = useMemo(() => sortItemsByCodigoRefPareto(PARES_CONCEITUAIS_IRMAOS), []);
 
@@ -88,11 +124,14 @@ export const BancaCesgranrio: React.FC = () => {
         </div>
 
         {showDistractors && (
-          <div className="mt-5 pt-5 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 animate-fadeIn">
+          <div
+            ref={distractorsRef}
+            className="mt-5 pt-5 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+          >
             {BANCA_PROFILE.distractorPatterns.map((d) => (
               <div
                 key={d.id}
-                className="bg-[#F6F8F7] p-3.5 rounded-xl border border-slate-200 text-xs space-y-1"
+                className="distractor-card bg-[#F5F7F6] p-3.5 rounded-xl border border-slate-200 text-xs space-y-1"
               >
                 <div className="font-bold text-slate-900">{d.label}</div>
                 <p className="text-slate-600 leading-relaxed">{d.description}</p>
@@ -286,7 +325,7 @@ export const BancaCesgranrio: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="mt-3 bg-orange-50/90 p-3.5 rounded-xl border border-orange-200 text-xs text-orange-950 leading-relaxed flex items-start gap-2 animate-fadeIn">
+                    <div className="toast-enter mt-3 bg-orange-50/90 p-3.5 rounded-xl border border-orange-200 text-xs text-orange-950 leading-relaxed flex items-start gap-2">
                       <AlertTriangle
                         className="w-4 h-4 text-orange-600 shrink-0 mt-0.5"
                         aria-hidden="true"

@@ -126,6 +126,28 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mindMaps = customData.mindMaps || [];
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
+  const isEditingNotesRef = useRef(isEditingNotes);
+  isEditingNotesRef.current = isEditingNotes;
+
+  useEffect(() => {
+    if (!isEditingNotesRef.current) {
+      setNotes(customData.notes || '');
+    }
+  }, [secaoId, customData.notes]);
+
+  useEffect(() => {
+    const handleFlushBeforeBackup = () => {
+      if (isEditingNotesRef.current && notesRef.current !== (customData.notes || '')) {
+        onSaveData(secaoId, { ...customData, notes: notesRef.current });
+      }
+    };
+    window.addEventListener('transpetro_prepare_backup_flush', handleFlushBeforeBackup);
+    return () => {
+      window.removeEventListener('transpetro_prepare_backup_flush', handleFlushBeforeBackup);
+    };
+  }, [secaoId, customData, onSaveData]);
 
   useEffect(() => {
     if (!showModal && !viewingMap) return;
@@ -554,10 +576,10 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-[#071F14] border-b border-[#133B28] text-white p-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2 min-w-0 pr-2">
-                <Layers className="w-5 h-5 text-purple-400 shrink-0" />
-                <h4 className="font-bold text-sm truncate">
+                <Layers className="w-5 h-5 text-[#FDB913] shrink-0" />
+                <h4 className="font-display font-bold text-sm truncate">
                   {editingMapId ? 'Editar Mapa Mental' : `Inserir Mapa Mental em ${secaoTitulo}`}
                 </h4>
               </div>
@@ -565,17 +587,17 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
                 type="button"
                 aria-label="Fechar janela"
                 onClick={() => setShowModal(false)} 
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="btn-tactile p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#113624] transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveMindMap} className="p-5 space-y-4 overflow-y-auto">
+            <form onSubmit={handleSaveMindMap} className="modal-scroll-area p-5 space-y-4 overflow-y-auto">
               {/* Error Banner */}
               {modalError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2 animate-fadeIn">
+                <div className="toast-enter p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div className="leading-relaxed font-medium">{modalError}</div>
                 </div>
@@ -708,14 +730,14 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  className="btn-tactile px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isProcessingFile}
-                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="btn-tactile px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
                   <span>{editingMapId ? 'Salvar Alterações' : 'Salvar Mapa Mental'}</span>
@@ -736,7 +758,7 @@ export const MindMapSection: React.FC<MindMapSectionProps> = ({
             role="dialog"
             aria-modal="true"
             aria-label={viewingMap.titulo}
-            className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col"
+            className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl border border-slate-700 overflow-hidden animate-scaleUp flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">

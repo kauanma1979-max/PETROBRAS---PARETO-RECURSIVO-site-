@@ -62,6 +62,15 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
 
   useEffect(() => {
     localStorage.setItem('transpetro_material_estudo_custom_v1', JSON.stringify(customDataBySecao));
+    try {
+      window.dispatchEvent(
+        new CustomEvent('transpetro_storage_changed', {
+          detail: { key: 'transpetro_material_estudo_custom_v1' },
+        })
+      );
+    } catch {
+      // ignore
+    }
   }, [customDataBySecao]);
 
   useEffect(() => {
@@ -72,6 +81,10 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
           setCustomDataBySecao(JSON.parse(saved));
         } else {
           setCustomDataBySecao({});
+        }
+        const savedMod = localStorage.getItem('transpetro_material_selected_modulo');
+        if (savedMod && MATERIAL_ESTUDOS.some((m) => m.id === savedMod)) {
+          setModuloAtivo(savedMod);
         }
       } catch {
         // ignore
@@ -108,9 +121,9 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
   }, [moduloSelecionado, busca]);
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       {/* Top Banner with Quick Actions */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(7,31,20,0.04),0_10px_24px_-16px_rgba(7,31,20,0.09)]">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#006837] tracking-wide">
@@ -132,7 +145,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
               id="btn-open-calc-tab-material"
               type="button"
               onClick={() => onOpenCalculator()}
-              className="h-10 px-4 rounded-xl bg-[#008542] hover:bg-[#006837] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer transition-colors whitespace-nowrap"
+              className="btn-tactile h-10 px-4 rounded-xl bg-[#008542] hover:bg-[#006837] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-2 shadow-[0_1px_2px_rgba(0,104,55,0.25),inset_0_1px_0_rgba(255,255,255,0.16)] cursor-pointer transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] whitespace-nowrap"
             >
               <Calculator className="w-4 h-4" aria-hidden="true" />
               <span>Calculadora de Fórmulas</span>
@@ -151,7 +164,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                 setModuloAtivo(mod.id);
                 setBusca('');
               }}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              className={`btn-tactile px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-[color,background-color,border-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                 moduloAtivo === mod.id
                   ? 'bg-[#071F14] text-[#FDB913] shadow-xs'
                   : 'bg-[#F6F8F7] text-slate-700 hover:bg-[#EFF4F1] border border-slate-200/80'
@@ -287,7 +300,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                       {secao.formulas.map((f, fIdx) => (
                         <div
                           key={fIdx}
-                          className="bg-[#F6F8F7] p-4 rounded-xl border border-slate-200 flex flex-col justify-between"
+                          className="card-interactive-hover bg-[#F5F7F6] p-4 rounded-xl border border-slate-200 flex flex-col justify-between"
                         >
                           <div>
                             <div className="font-display font-bold text-sm text-[#071F14] mb-2">
@@ -310,7 +323,7 @@ export const TabMaterialEstudo: React.FC<TabMaterialEstudoProps> = ({ onOpenCalc
                           <button
                             type="button"
                             onClick={() => onOpenCalculator(f.nome)}
-                            className="mt-4 w-full py-2 rounded-lg bg-[#E6F4EC] hover:bg-[#008542] text-xs font-semibold text-[#006837] hover:text-white border border-[#008542]/25 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                            className="btn-tactile mt-4 w-full py-2 rounded-lg bg-[#E6F4EC] hover:bg-[#008542] text-xs font-semibold text-[#006837] hover:text-white border border-[#008542]/25 transition-[color,background-color,transform] duration-150 ease-[var(--ease-out)] cursor-pointer flex items-center justify-center gap-1.5"
                           >
                             <Calculator className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>Simular na Calculadora</span>
